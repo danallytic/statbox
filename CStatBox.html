@@ -1,0 +1,3067 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StatBox - Calculateur Statistique Portable</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --disabled: #9ca3af;
+            --border: #e5e7eb;
+            --bg-light: #f9fafb;
+            --bg-white: #ffffff;
+            --text-dark: #111827;
+            --text-gray: #6b7280;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 1rem;
+            color: var(--text-dark);
+        }
+        
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--bg-white);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: calc(100vh - 2rem);
+        }
+        
+        .app-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .app-header h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; }
+        
+        .tabs-container {
+            background: var(--bg-light);
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            overflow-x: auto;
+        }
+        
+        .tab-button {
+            flex: 1;
+            min-width: 120px;
+            padding: 1rem;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text-gray);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .tab-button:hover { background: rgba(37, 99, 235, 0.05); color: var(--primary); }
+        .tab-button.active { color: var(--primary); font-weight: 600; }
+        .tab-button.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--primary);
+        }
+        
+        .content-area { flex: 1; padding: 1.5rem; overflow-y: auto; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .form-group { margin-bottom: 1.5rem; }
+        .form-label { display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.95rem; }
+        
+        .form-input, .form-select {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        .form-error {
+            color: var(--danger);
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+        
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .radio-option {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .radio-option:hover { border-color: var(--primary); background: rgba(37, 99, 235, 0.05); }
+        .radio-option.selected { border-color: var(--primary); background: rgba(37, 99, 235, 0.1); }
+        .radio-option input { margin-right: 1rem; width: 20px; height: 20px; }
+        
+        .btn {
+            padding: 1rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+        
+        .btn-secondary { background: var(--bg-light); color: var(--text-dark); border: 2px solid var(--border); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-group { display: flex; gap: 1rem; flex-wrap: wrap; }
+        
+        .result-card {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            background: var(--bg-light);
+        }
+        
+        .result-header { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; }
+        
+        .result-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        
+        .stat-item {
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        
+        .stat-label { font-size: 0.85rem; color: var(--text-gray); margin-bottom: 0.25rem; }
+        .stat-value { font-size: 1.3rem; font-weight: 700; color: var(--primary); font-family: 'Consolas', monospace; }
+        
+        .canvas-container {
+            margin: 1.5rem 0;
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+        }
+        
+        canvas { max-width: 100%; height: auto; }
+        .hidden { display: none; }
+        .law-params { display: none; }
+        .law-params.active { display: block; }
+        
+        @media (max-width: 768px) {
+            body { padding: 0; }
+            .app-container { border-radius: 0; min-height: 100vh; }
+            .app-header h1 { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>📊 StatBox</h1>
+            <p>Calculateur Statistique Portable v3.0</p>
+        </header>
+        
+        <nav class="tabs-container">
+            <button class="tab-button active" data-tab="laws">Lois de Probabilité</button>
+            <button class="tab-button" data-tab="tests">Tests d'Hypothèses</button>
+            <button class="tab-button" data-tab="normality">Tests de Normalité</button>
+            <button class="tab-button" data-tab="estimation">Estimations (IC)</button>
+            <button class="tab-button" data-tab="about">À Propos</button>
+        </nav>
+        
+        <main class="content-area">
+            <div id="tab-laws" class="tab-content active">
+                <h2 style="margin-bottom: 1.5rem;">Calculateur de Lois de Probabilité</h2>
+                
+                <div class="form-group">
+                    <label class="form-label">Sélectionner une loi</label>
+                    <select id="lawSelect" class="form-select">
+                        <option value="normal">Loi Normale N(μ, σ)</option>
+                        <option value="student">Loi de Student (t)</option>
+                        <option value="chisquare">Loi du Chi-deux (χ²)</option>
+                        <option value="fisher">Loi de Fisher (F)</option>
+                    </select>
+                </div>
+                
+                <div id="normalParams" class="law-params active">
+                    <div class="form-group">
+                        <label class="form-label">Moyenne (μ)</label>
+                        <input type="number" id="normalMu" class="form-input" value="0" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Écart-type (σ)</label>
+                        <input type="number" id="normalSigma" class="form-input" value="1" step="0.1" min="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Mode de calcul</label>
+                        <div class="radio-group">
+                            <label class="radio-option selected">
+                                <input type="radio" name="normalMode" value="x" checked>
+                                <span>Calculer P(X &lt; x) à partir de x</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="normalMode" value="p">
+                                <span>Calculer x à partir de p (quantile)</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group" id="normalXGroup">
+                        <label class="form-label">Valeur x</label>
+                        <input type="number" id="normalX" class="form-input" placeholder="Ex: 1.96" step="0.01">
+                    </div>
+                    <div class="form-group hidden" id="normalPGroup">
+                        <label class="form-label">Probabilité p (entre 0 et 1)</label>
+                        <input type="number" id="normalP" class="form-input" placeholder="Ex: 0.975" step="0.001" min="0" max="1">
+                    </div>
+                </div>
+                
+                <div id="studentParams" class="law-params">
+                    <div class="form-group">
+                        <label class="form-label">Degrés de liberté (ddl)</label>
+                        <input type="number" id="studentDf" class="form-input" value="10" min="1" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Mode de calcul</label>
+                        <div class="radio-group">
+                            <label class="radio-option selected">
+                                <input type="radio" name="studentMode" value="t" checked>
+                                <span>Calculer P(T &lt; t) à partir de t</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="studentMode" value="p">
+                                <span>Calculer t à partir de p (quantile)</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group" id="studentTGroup">
+                        <label class="form-label">Valeur t</label>
+                        <input type="number" id="studentT" class="form-input" placeholder="Ex: 2.228" step="0.01">
+                    </div>
+                    <div class="form-group hidden" id="studentPGroup">
+                        <label class="form-label">Probabilité p (entre 0 et 1)</label>
+                        <input type="number" id="studentP" class="form-input" placeholder="Ex: 0.975" step="0.001" min="0" max="1">
+                    </div>
+                </div>
+                
+                <div id="chisquareParams" class="law-params">
+                    <div class="form-group">
+                        <label class="form-label">Degrés de liberté (ddl)</label>
+                        <input type="number" id="chiDf" class="form-input" value="5" min="1" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Mode de calcul</label>
+                        <div class="radio-group">
+                            <label class="radio-option selected">
+                                <input type="radio" name="chiMode" value="x" checked>
+                                <span>Calculer P(χ² &gt; x) à partir de x</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="chiMode" value="p">
+                                <span>Calculer x à partir de p (quantile)</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group" id="chiXGroup">
+                        <label class="form-label">Valeur χ²</label>
+                        <input type="number" id="chiX" class="form-input" placeholder="Ex: 11.07" step="0.01" min="0">
+                    </div>
+                    <div class="form-group hidden" id="chiPGroup">
+                        <label class="form-label">Probabilité p (entre 0 et 1)</label>
+                        <input type="number" id="chiP" class="form-input" placeholder="Ex: 0.95" step="0.001" min="0" max="1">
+                    </div>
+                </div>
+                
+                <div id="fisherParams" class="law-params">
+                    <div class="form-group">
+                        <label class="form-label">Degrés de liberté 1 (ddl₁)</label>
+                        <input type="number" id="fisherDf1" class="form-input" value="5" min="1" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Degrés de liberté 2 (ddl₂)</label>
+                        <input type="number" id="fisherDf2" class="form-input" value="10" min="1" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Mode de calcul</label>
+                        <div class="radio-group">
+                            <label class="radio-option selected">
+                                <input type="radio" name="fisherMode" value="f" checked>
+                                <span>Calculer P(F &gt; f) à partir de f</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="fisherMode" value="p">
+                                <span>Calculer f à partir de p (quantile)</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group" id="fisherFGroup">
+                        <label class="form-label">Valeur F</label>
+                        <input type="number" id="fisherF" class="form-input" placeholder="Ex: 3.33" step="0.01" min="0">
+                    </div>
+                    <div class="form-group hidden" id="fisherPGroup">
+                        <label class="form-label">Probabilité p (entre 0 et 1)</label>
+                        <input type="number" id="fisherP" class="form-input" placeholder="Ex: 0.95" step="0.001" min="0" max="1">
+                    </div>
+                </div>
+                
+                <div class="btn-group">
+                    <button id="btnCalculateLaw" class="btn btn-primary">📊 Calculer</button>
+                    <button id="btnResetLaw" class="btn btn-secondary">🔄 Réinitialiser</button>
+                </div>
+                
+                <div id="lawResult" class="hidden"></div>
+                <div class="canvas-container hidden" id="lawCanvasContainer">
+                    <canvas id="lawCanvas" width="600" height="300"></canvas>
+                </div>
+            </div>
+            
+            <div id="tab-tests" class="tab-content">
+                <h2 style="margin-bottom: 1.5rem;">Tests d'Hypothèses</h2>
+                
+                <div class="form-group">
+                    <label class="form-label">Sélectionner un test</label>
+                    <select id="testSelect" class="form-select">
+                        <option value="ztest">Test Z (variance connue)</option>
+                        <option value="ttest">Test t de Student (variance inconnue)</option>
+                        <option value="chitest">Test du Chi-deux (variance)</option>
+                        <option value="ftest">Test F de Fisher (comparaison de variances)</option>
+                    </select>
+                </div>
+                
+                <!-- Curseur Alpha -->
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Niveau de signification (α)</span>
+                        <span class="slider-value" id="testAlphaValue">0.05</span>
+                    </div>
+                    <input type="range" id="testAlpha" class="slider" min="0.01" max="0.10" step="0.01" value="0.05">
+                </div>
+                
+                <!-- Test Z -->
+                <div id="ztestParams" class="law-params active">
+                    <div class="form-group">
+                        <label class="form-label">Moyenne sous H₀ (μ₀)</label>
+                        <input type="number" id="zMu0" class="form-input" value="0" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Écart-type de la population (σ)</label>
+                        <input type="number" id="zSigma" class="form-input" value="1" step="0.1" min="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Moyenne de l'échantillon (x̄)</label>
+                        <input type="number" id="zXbar" class="form-input" placeholder="Ex: 0.5" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Taille de l'échantillon (n)</label>
+                        <input type="number" id="zN" class="form-input" value="30" min="2" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Type de test</label>
+                        <div class="radio-group">
+                            <label class="radio-option selected">
+                                <input type="radio" name="ztestType" value="bilateral" checked>
+                                <span>Bilatéral (H₁: μ ≠ μ₀)</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="ztestType" value="left">
+                                <span>Unilatéral gauche (H₁: μ &lt; μ₀)</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="ztestType" value="right">
+                                <span>Unilatéral droit (H₁: μ &gt; μ₀)</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Test t -->
+                <div id="ttestParams" class="law-params">
+                    <div class="form-group">
+                        <label class="form-label">Moyenne sous H₀ (μ₀)</label>
+                        <input type="number" id="tMu0" class="form-input" value="0" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Moyenne de l'échantillon (x̄)</label>
+                        <input type="number" id="tXbar" class="form-input" placeholder="Ex: 0.5" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Écart-type de l'échantillon (s)</label>
+                        <input type="number" id="tS" class="form-input" placeholder="Ex: 1.2" step="0.01" min="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Taille de l'échantillon (n)</label>
+                        <input type="number" id="tN" class="form-input" value="30" min="2" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Type de test</label>
+                        <div class="radio-group">
+                            <label class="radio-option selected">
+                                <input type="radio" name="ttestType" value="bilateral" checked>
+                                <span>Bilatéral (H₁: μ ≠ μ₀)</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="ttestType" value="left">
+                                <span>Unilatéral gauche (H₁: μ &lt; μ₀)</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="ttestType" value="right">
+                                <span>Unilatéral droit (H₁: μ &gt; μ₀)</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Test Chi-deux -->
+                <div id="chitestParams" class="law-params">
+                    <div class="form-group">
+                        <label class="form-label">Variance sous H₀ (σ₀²)</label>
+                        <input type="number" id="chiVar0" class="form-input" value="1" step="0.1" min="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Variance de l'échantillon (s²)</label>
+                        <input type="number" id="chiS2" class="form-input" placeholder="Ex: 1.5" step="0.01" min="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Taille de l'échantillon (n)</label>
+                        <input type="number" id="chiN" class="form-input" value="30" min="2" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Type de test</label>
+                        <div class="radio-group">
+                            <label class="radio-option selected">
+                                <input type="radio" name="chitestType" value="bilateral" checked>
+                                <span>Bilatéral (H₁: σ² ≠ σ₀²)</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="chitestType" value="left">
+                                <span>Unilatéral gauche (H₁: σ² &lt; σ₀²)</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="chitestType" value="right">
+                                <span>Unilatéral droit (H₁: σ² &gt; σ₀²)</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Test F -->
+                <div id="ftestParams" class="law-params">
+                    <div class="form-group">
+                        <label class="form-label">Variance échantillon 1 (s₁²)</label>
+                        <input type="number" id="fS1" class="form-input" placeholder="Ex: 1.2" step="0.01" min="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Taille échantillon 1 (n₁)</label>
+                        <input type="number" id="fN1" class="form-input" value="20" min="2" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Variance échantillon 2 (s₂²)</label>
+                        <input type="number" id="fS2" class="form-input" placeholder="Ex: 0.8" step="0.01" min="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Taille échantillon 2 (n₂)</label>
+                        <input type="number" id="fN2" class="form-input" value="25" min="2" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Type de test</label>
+                        <div class="radio-group">
+                            <label class="radio-option selected">
+                                <input type="radio" name="ftestType" value="bilateral" checked>
+                                <span>Bilatéral (H₁: σ₁² ≠ σ₂²)</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="ftestType" value="left">
+                                <span>Unilatéral gauche (H₁: σ₁² &lt; σ₂²)</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="ftestType" value="right">
+                                <span>Unilatéral droit (H₁: σ₁² &gt; σ₂²)</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="btn-group">
+                    <button id="btnCalculateTest" class="btn btn-primary">🧪 Calculer le test</button>
+                    <button id="btnResetTest" class="btn btn-secondary">🔄 Réinitialiser</button>
+                </div>
+                
+                <div id="testResult" class="hidden"></div>
+            </div>
+            
+            <div id="tab-normality" class="tab-content">
+                <h2 style="margin-bottom: 1.5rem;">Tests de Normalité</h2>
+                
+                <div class="form-group">
+                    <label class="form-label">Saisir les données (séparées par des virgules, espaces ou retours à la ligne)</label>
+                    <textarea id="normalityData" class="form-textarea" placeholder="Ex: 1.2, 3.4, 2.1, 4.5, 3.2, ...&#10;Ou une valeur par ligne"></textarea>
+                    <div class="data-count hidden" id="dataCount">0 valeurs</div>
+                </div>
+                
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Niveau de signification (α)</span>
+                        <span class="slider-value" id="normalityAlphaValue">0.05</span>
+                    </div>
+                    <input type="range" id="normalityAlpha" class="slider" min="0.01" max="0.10" step="0.01" value="0.05">
+                </div>
+                
+                <div class="btn-group">
+                    <button id="btnTestNormality" class="btn btn-primary">📈 Tester la normalité</button>
+                    <button id="btnResetNormality" class="btn btn-secondary">🔄 Réinitialiser</button>
+                </div>
+                
+                <div id="normalityResult" class="hidden"></div>
+                <div class="canvas-container hidden" id="normalityCanvasContainer">
+                    <canvas id="normalityCanvas" width="600" height="300"></canvas>
+                </div>
+            </div>
+            
+            <div id="tab-estimation" class="tab-content">
+                <h2 style="margin-bottom: 1.5rem;">Intervalles de Confiance (Estimations)</h2>
+                
+                <div class="form-group">
+                    <label class="form-label">Type d'estimation</label>
+                    <select id="estimationSelect" class="form-select">
+                        <optgroup label="Estimation d'un paramètre">
+                            <option value="mean-known">Moyenne (variance connue)</option>
+                            <option value="mean-unknown">Moyenne (variance inconnue)</option>
+                            <option value="variance">Variance</option>
+                            <option value="proportion">Proportion</option>
+                        </optgroup>
+                        <optgroup label="Comparaison de deux populations">
+                            <option value="diff-means-known">Différence de moyennes (variances connues)</option>
+                            <option value="diff-means-equal">Différence de moyennes (variances égales)</option>
+                            <option value="diff-means-unequal">Différence de moyennes (variances différentes - Welch)</option>
+                            <option value="ratio-variances">Ratio de variances</option>
+                            <option value="diff-proportions">Différence de proportions</option>
+                        </optgroup>
+                    </select>
+                </div>
+                
+                <!-- Curseur Niveau de confiance -->
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Niveau de confiance (1 - α)</span>
+                        <span class="slider-value" id="confidenceValue">95%</span>
+                    </div>
+                    <input type="range" id="confidenceLevel" class="slider" min="90" max="99" step="1" value="95">
+                </div>
+                
+                <!-- Moyenne variance connue -->
+                <div id="mean-knownParams" class="law-params active">
+                    <div class="form-group">
+                        <label class="form-label">Moyenne de l'échantillon (x̄)</label>
+                        <input type="number" id="mk-xbar" class="form-input" placeholder="Ex: 50.5" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Écart-type de la population (σ)</label>
+                        <input type="number" id="mk-sigma" class="form-input" placeholder="Ex: 10" step="0.01" min="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Taille de l'échantillon (n)</label>
+                        <input type="number" id="mk-n" class="form-input" value="30" min="2" step="1">
+                    </div>
+                </div>
+                
+                <!-- Moyenne variance inconnue -->
+                <div id="mean-unknownParams" class="law-params">
+                    <div class="form-group">
+                        <label class="form-label">Moyenne de l'échantillon (x̄)</label>
+                        <input type="number" id="mu-xbar" class="form-input" placeholder="Ex: 50.5" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Écart-type de l'échantillon (s)</label>
+                        <input type="number" id="mu-s" class="form-input" placeholder="Ex: 12" step="0.01" min="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Taille de l'échantillon (n)</label>
+                        <input type="number" id="mu-n" class="form-input" value="30" min="2" step="1">
+                    </div>
+                </div>
+                
+                <!-- Variance -->
+                <div id="varianceParams" class="law-params">
+                    <div class="form-group">
+                        <label class="form-label">Variance de l'échantillon (s²)</label>
+                        <input type="number" id="var-s2" class="form-input" placeholder="Ex: 144" step="0.01" min="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Taille de l'échantillon (n)</label>
+                        <input type="number" id="var-n" class="form-input" value="30" min="2" step="1">
+                    </div>
+                </div>
+                
+                <!-- Proportion -->
+                <div id="proportionParams" class="law-params">
+                    <div class="form-group">
+                        <label class="form-label">Nombre de succès (x)</label>
+                        <input type="number" id="prop-x" class="form-input" placeholder="Ex: 65" min="0" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Taille de l'échantillon (n)</label>
+                        <input type="number" id="prop-n" class="form-input" value="100" min="1" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">OU Proportion observée (p̂)</label>
+                        <input type="number" id="prop-phat" class="form-input" placeholder="Ex: 0.65" step="0.001" min="0" max="1">
+                        <span style="font-size: 0.85rem; color: var(--text-gray);">Si rempli, x et n ci-dessus seront ignorés</span>
+                    </div>
+                </div>
+                
+                <!-- Différence de moyennes (variances connues) -->
+                <div id="diff-means-knownParams" class="law-params">
+                    <h3 style="margin-bottom: 1rem;">Échantillon 1</h3>
+                    <div class="form-group">
+                        <label class="form-label">Moyenne (x̄₁)</label>
+                        <input type="number" id="dmk-xbar1" class="form-input" placeholder="Ex: 50" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Écart-type population (σ₁)</label>
+                        <input type="number" id="dmk-sigma1" class="form-input" placeholder="Ex: 10" step="0.01" min="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Taille (n₁)</label>
+                        <input type="number" id="dmk-n1" class="form-input" value="30" min="2" step="1">
+                    </div>
+                    
+                    <h3 style="margin: 1.5rem 0 1rem 0;">Échantillon 2</h3>
+                    <div class="form-group">
+                        <label class="form-label">Moyenne (x̄₂)</label>
+                        <input type="number" id="dmk-xbar2" class="form-input" placeholder="Ex: 48" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Écart-type population (σ₂)</label>
+                        <input type="number" id="dmk-sigma2" class="form-input" placeholder="Ex: 12" step="0.01" min="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Taille (n₂)</label>
+                        <input type="number" id="dmk-n2" class="form-input" value="35" min="2" step="1">
+                    </div>
+                </div>
+                
+                <!-- Différence de moyennes (variances égales) -->
+                <div id="diff-means-equalParams" class="law-params">
+                    <h3 style="margin-bottom: 1rem;">Échantillon 1</h3>
+                    <div class="form-group">
+                        <label class="form-label">Moyenne (x̄₁)</label>
+                        <input type="number" id="dme-xbar1" class="form-input" placeholder="Ex: 50" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Écart-type échantillon (s₁)</label>
+                        <input type="number" id="dme-s1" class="form-input" placeholder="Ex: 10" step="0.01" min="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Taille (n₁)</label>
+                        <input type="number" id="dme-n1" class="form-input" value="30" min="2" step="1">
+                    </div>
+                    
+                    <h3 style="margin: 1.5rem 0 1rem 0;">Échantillon 2</h3>
+                    <div class="form-group">
+                        <label class="form-label">Moyenne (x̄₂)</label>
+                        <input type="number" id="dme-xbar2" class="form-input" placeholder="Ex: 48" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Écart-type échantillon (s₂)</label>
+                        <input type="number" id="dme-s2" class="form-input" placeholder="Ex: 12" step="0.01" min="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Taille (n₂)</label>
+                        <input type="number" id="dme-n2" class="form-input" value="35" min="2" step="1">
+                    </div>
+                </div>
+                
+                <!-- Différence de moyennes (Welch) -->
+                <div id="diff-means-unequalParams" class="law-params">
+                    <h3 style="margin-bottom: 1rem;">Échantillon 1</h3>
+                    <div class="form-group">
+                        <label class="form-label">Moyenne (x̄₁)</label>
+                        <input type="number" id="dmu-xbar1" class="form-input" placeholder="Ex: 50" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Écart-type échantillon (s₁)</label>
+                        <input type="number" id="dmu-s1" class="form-input" placeholder="Ex: 10" step="0.01" min="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Taille (n₁)</label>
+                        <input type="number" id="dmu-n1" class="form-input" value="30" min="2" step="1">
+                    </div>
+                    
+                    <h3 style="margin: 1.5rem 0 1rem 0;">Échantillon 2</h3>
+                    <div class="form-group">
+                        <label class="form-label">Moyenne (x̄₂)</label>
+                        <input type="number" id="dmu-xbar2" class="form-input" placeholder="Ex: 48" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Écart-type échantillon (s₂)</label>
+                        <input type="number" id="dmu-s2" class="form-input" placeholder="Ex: 15" step="0.01" min="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Taille (n₂)</label>
+                        <input type="number" id="dmu-n2" class="form-input" value="25" min="2" step="1">
+                    </div>
+                </div>
+                
+                <!-- Ratio de variances -->
+                <div id="ratio-variancesParams" class="law-params">
+                    <h3 style="margin-bottom: 1rem;">Échantillon 1</h3>
+                    <div class="form-group">
+                        <label class="form-label">Variance (s₁²)</label>
+                        <input type="number" id="rv-s1" class="form-input" placeholder="Ex: 100" step="0.01" min="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Taille (n₁)</label>
+                        <input type="number" id="rv-n1" class="form-input" value="20" min="2" step="1">
+                    </div>
+                    
+                    <h3 style="margin: 1.5rem 0 1rem 0;">Échantillon 2</h3>
+                    <div class="form-group">
+                        <label class="form-label">Variance (s₂²)</label>
+                        <input type="number" id="rv-s2" class="form-input" placeholder="Ex: 80" step="0.01" min="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Taille (n₂)</label>
+                        <input type="number" id="rv-n2" class="form-input" value="25" min="2" step="1">
+                    </div>
+                </div>
+                
+                <!-- Différence de proportions -->
+                <div id="diff-proportionsParams" class="law-params">
+                    <h3 style="margin-bottom: 1rem;">Échantillon 1</h3>
+                    <div class="form-group">
+                        <label class="form-label">Nombre de succès (x₁)</label>
+                        <input type="number" id="dp-x1" class="form-input" placeholder="Ex: 45" min="0" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Taille (n₁)</label>
+                        <input type="number" id="dp-n1" class="form-input" value="100" min="1" step="1">
+                    </div>
+                    
+                    <h3 style="margin: 1.5rem 0 1rem 0;">Échantillon 2</h3>
+                    <div class="form-group">
+                        <label class="form-label">Nombre de succès (x₂)</label>
+                        <input type="number" id="dp-x2" class="form-input" placeholder="Ex: 30" min="0" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Taille (n₂)</label>
+                        <input type="number" id="dp-n2" class="form-input" value="100" min="1" step="1">
+                    </div>
+                </div>
+                
+                <div class="btn-group">
+                    <button id="btnCalculateEstimation" class="btn btn-primary">📊 Calculer l'IC</button>
+                    <button id="btnResetEstimation" class="btn btn-secondary">🔄 Réinitialiser</button>
+                </div>
+                
+                <div id="estimationResult" class="hidden"></div>
+            </div>
+            
+            <div id="tab-about" class="tab-content">
+                <h2>À Propos de StatBox</h2>
+                <div class="result-card">
+                    <h3>📘 Description</h3>
+                    <p style="margin-top: 1rem; line-height: 1.6;">
+                        StatBox est une application statistique portable et autonome, sans dépendances externes.
+                    </p>
+                    <h3 style="margin-top: 2rem;">✨ Fonctionnalités</h3>
+                    <ul style="margin-top: 1rem; line-height: 1.8; padding-left: 1.5rem;">
+                        <li>4 Lois de probabilité (Normale, Student, Chi-deux, Fisher)</li>
+                        <li>4 Tests d'hypothèses (Z, t, χ², F)</li>
+                        <li>2 Tests de normalité (Jarque-Bera, Shapiro-Wilk)</li>
+                        <li>9 Types d'intervalles de confiance</li>
+                        <li>Graphiques haute qualité</li>
+                        <li>100% hors ligne</li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // ========== FONCTIONS MATHÉMATIQUES PURES (sans opérateurs ternaires) ==========
+        
+        function erf(x) {
+            var sign = 1;
+            if (x < 0) {
+                sign = -1;
+            }
+            x = Math.abs(x);
+            
+            var a1 = 0.254829592;
+            var a2 = -0.284496736;
+            var a3 = 1.421413741;
+            var a4 = -1.453152027;
+            var a5 = 1.061405429;
+            var p = 0.3275911;
+            
+            var t = 1.0 / (1.0 + p * x);
+            var y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+            
+            return sign * y;
+        }
+        
+        function normalCDF(x, mu, sigma) {
+            var z = (x - mu) / sigma;
+            return 0.5 * (1.0 + erf(z / Math.sqrt(2.0)));
+        }
+        
+        function normalQuantile(p, mu, sigma) {
+            // Approximation de Beasley-Springer-Moro
+            var a0 = 2.50662823884;
+            var a1 = -18.61500062529;
+            var a2 = 41.39119773534;
+            var a3 = -25.44106049637;
+            
+            var b0 = -8.47351093090;
+            var b1 = 23.08336743743;
+            var b2 = -21.06224101826;
+            var b3 = 3.13082909833;
+            
+            var c0 = 0.3374754822726147;
+            var c1 = 0.9761690190917186;
+            var c2 = 0.1607979714918209;
+            var c3 = 0.0276438810333863;
+            var c4 = 0.0038405729373609;
+            var c5 = 0.0003951896511919;
+            var c6 = 0.0000321767881768;
+            var c7 = 0.0000002888167364;
+            var c8 = 0.0000003960315187;
+            
+            var y = p - 0.5;
+            var r, x;
+            
+            if (Math.abs(y) < 0.42) {
+                r = y * y;
+                x = y * (((a3 * r + a2) * r + a1) * r + a0) /
+                    ((((b3 * r + b2) * r + b1) * r + b0) * r + 1.0);
+            } else {
+                if (y > 0) {
+                    r = 1.0 - p;
+                } else {
+                    r = p;
+                }
+                
+                r = Math.log(-Math.log(r));
+                x = c0 + r * (c1 + r * (c2 + r * (c3 + r * (c4 + r * (c5 + r * (c6 + r * (c7 + r * c8)))))));
+                
+                if (y < 0) {
+                    x = -x;
+                }
+            }
+            
+            return mu + sigma * x;
+        }
+        
+        // Fonction Gamma (approximation de Lanczos)
+        function gamma(z) {
+            var g = 7;
+            var coef = [
+                0.99999999999980993,
+                676.5203681218851,
+                -1259.1392167224028,
+                771.32342877765313,
+                -176.61502916214059,
+                12.507343278686905,
+                -0.13857109526572012,
+                9.9843695780195716e-6,
+                1.5056327351493116e-7
+            ];
+            
+            if (z < 0.5) {
+                return Math.PI / (Math.sin(Math.PI * z) * gamma(1 - z));
+            }
+            
+            z -= 1;
+            var x = coef[0];
+            for (var i = 1; i < g + 2; i++) {
+                x += coef[i] / (z + i);
+            }
+            
+            var t = z + g + 0.5;
+            return Math.sqrt(2 * Math.PI) * Math.pow(t, z + 0.5) * Math.exp(-t) * x;
+        }
+        
+        function lnGamma(z) {
+            return Math.log(gamma(z));
+        }
+        
+        // Distribution de Student - CDF
+        function studentCDF(t, df) {
+            var x = df / (df + t * t);
+            return 1 - 0.5 * incompleteBeta(x, df / 2, 0.5);
+        }
+        
+        // Distribution de Student - PDF
+        function studentPDF(t, df) {
+            var coef = gamma((df + 1) / 2) / (Math.sqrt(df * Math.PI) * gamma(df / 2));
+            return coef * Math.pow(1 + (t * t) / df, -(df + 1) / 2);
+        }
+        
+        // Distribution de Student - Quantile (approximation)
+        function studentQuantile(p, df) {
+            // Approximation de Hill
+            var a = 1 / (df - 0.5);
+            var b = 48 / (a * a);
+            var c = ((20700 * a / b - 98) * a - 16) * a + 96.36;
+            var d = ((94.5 / (b + c) - 3) / b + 1) * Math.sqrt(a * Math.PI / 2) * df;
+            var x = d * p;
+            var y = Math.pow(x, 2 / df);
+            
+            if (y > 0.05 + a) {
+                x = normalQuantile(p, 0, 1);
+                y = x * x;
+                if (df < 5) {
+                    c += 0.3 * (df - 4.5) * (x + 0.6);
+                }
+                c = (((0.05 * d * x - 5) * x - 7) * x - 2) * x + b + c;
+                y = (((((0.4 * y + 6.3) * y + 36) * y + 94.5) / c - y - 3) / b + 1) * x;
+                y = a * y * y;
+                if (y > 0.002) {
+                    y = Math.exp(y) - 1;
+                } else {
+                    y = 0.5 * y * y + y;
+                }
+            } else {
+                y = ((1 / (((df + 6) / (df * y) - 0.089 * d - 0.822) * (df + 2) * 3) + 0.5 / (df + 4)) * y - 1) * (df + 1) / (df + 2) + 1 / y;
+            }
+            
+            return Math.sqrt(df * y);
+        }
+        
+        // Fonction Beta incomplète (approximation simple)
+        function incompleteBeta(x, a, b) {
+            if (x <= 0) return 0;
+            if (x >= 1) return 1;
+            
+            // Approximation par série
+            var bt = Math.exp(lnGamma(a + b) - lnGamma(a) - lnGamma(b) + a * Math.log(x) + b * Math.log(1 - x));
+            
+            if (x < (a + 1) / (a + b + 2)) {
+                return bt * betacf(x, a, b) / a;
+            } else {
+                return 1 - bt * betacf(1 - x, b, a) / b;
+            }
+        }
+        
+        // Fraction continue pour Beta
+        function betacf(x, a, b) {
+            var maxIterations = 100;
+            var epsilon = 3e-7;
+            var qab = a + b;
+            var qap = a + 1;
+            var qam = a - 1;
+            var c = 1;
+            var d = 1 - qab * x / qap;
+            
+            if (Math.abs(d) < 1e-30) d = 1e-30;
+            d = 1 / d;
+            var h = d;
+            
+            for (var m = 1; m <= maxIterations; m++) {
+                var m2 = 2 * m;
+                var aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+                d = 1 + aa * d;
+                if (Math.abs(d) < 1e-30) d = 1e-30;
+                c = 1 + aa / c;
+                if (Math.abs(c) < 1e-30) c = 1e-30;
+                d = 1 / d;
+                h *= d * c;
+                
+                aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+                d = 1 + aa * d;
+                if (Math.abs(d) < 1e-30) d = 1e-30;
+                c = 1 + aa / c;
+                if (Math.abs(c) < 1e-30) c = 1e-30;
+                d = 1 / d;
+                var del = d * c;
+                h *= del;
+                
+                if (Math.abs(del - 1) < epsilon) break;
+            }
+            
+            return h;
+        }
+        
+        // Distribution du Chi-deux - CDF
+        function chi2CDF(x, df) {
+            if (x <= 0) return 0;
+            return incompleteBeta(x / (x + df), df / 2, 0.5);
+        }
+        
+        // Distribution du Chi-deux - PDF
+        function chi2PDF(x, df) {
+            if (x <= 0) return 0;
+            return (1 / (Math.pow(2, df / 2) * gamma(df / 2))) * Math.pow(x, df / 2 - 1) * Math.exp(-x / 2);
+        }
+        
+        // Distribution du Chi-deux - Quantile (approximation de Wilson-Hilferty)
+        function chi2Quantile(p, df) {
+            var z = normalQuantile(p, 0, 1);
+            var h = 2 / (9 * df);
+            var x = 1 - h + z * Math.sqrt(h);
+            return df * x * x * x;
+        }
+        
+        // Distribution de Fisher - CDF
+        function fisherCDF(f, df1, df2) {
+            if (f <= 0) return 0;
+            var x = (df1 * f) / (df1 * f + df2);
+            return incompleteBeta(x, df1 / 2, df2 / 2);
+        }
+        
+        // Distribution de Fisher - PDF
+        function fisherPDF(f, df1, df2) {
+            if (f <= 0) return 0;
+            var numerator = Math.sqrt(Math.pow(df1 * f, df1) * Math.pow(df2, df2) / Math.pow(df1 * f + df2, df1 + df2));
+            var denominator = f * Math.exp(lnGamma(df1 / 2) + lnGamma(df2 / 2) - lnGamma((df1 + df2) / 2));
+            return numerator / denominator;
+        }
+        
+        // Distribution de Fisher - Quantile
+        function fisherQuantile(p, df1, df2) {
+            // Utiliser la relation avec Beta pour calculer le quantile
+            var x = incompleteBetaInv(p, df1 / 2, df2 / 2);
+            return (df2 * x) / (df1 * (1 - x));
+        }
+        
+        // Inverse de Beta incomplète (par recherche binaire)
+        function incompleteBetaInv(p, a, b) {
+            var epsilon = 1e-8;
+            var lower = 0;
+            var upper = 1;
+            var x = 0.5;
+            
+            for (var i = 0; i < 100; i++) {
+                var value = incompleteBeta(x, a, b);
+                if (Math.abs(value - p) < epsilon) break;
+                
+                if (value < p) {
+                    lower = x;
+                } else {
+                    upper = x;
+                }
+                x = (lower + upper) / 2;
+            }
+            
+            return x;
+        }
+        
+        var Utils = {
+            isValidNumber: function(value) {
+                return value !== '' && !isNaN(value) && isFinite(value);
+            },
+            
+            formatNumber: function(num, decimals) {
+                if (decimals === undefined) decimals = 4;
+                if (num === null || num === undefined || isNaN(num)) return 'N/A';
+                var absNum = Math.abs(num);
+                if (absNum < 0.0001 && absNum > 0) {
+                    return num.toExponential(decimals);
+                }
+                return num.toFixed(decimals);
+            }
+        };
+        
+        // ========== GESTION DE L'INTERFACE ==========
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Navigation entre onglets
+            var tabButtons = document.querySelectorAll('.tab-button');
+            for (var i = 0; i < tabButtons.length; i++) {
+                tabButtons[i].addEventListener('click', function() {
+                    var targetTab = this.getAttribute('data-tab');
+                    switchTab(targetTab);
+                });
+            }
+            
+            function switchTab(tabName) {
+                var buttons = document.querySelectorAll('.tab-button');
+                var contents = document.querySelectorAll('.tab-content');
+                
+                for (var i = 0; i < buttons.length; i++) {
+                    buttons[i].classList.remove('active');
+                }
+                
+                for (var i = 0; i < contents.length; i++) {
+                    contents[i].classList.remove('active');
+                }
+                
+                var targetButton = document.querySelector('[data-tab="' + tabName + '"]');
+                var targetContent = document.getElementById('tab-' + tabName);
+                
+                if (targetButton) targetButton.classList.add('active');
+                if (targetContent) targetContent.classList.add('active');
+            }
+            
+            // Changement de loi
+            var lawSelect = document.getElementById('lawSelect');
+            lawSelect.addEventListener('change', function() {
+                showLawParams(this.value);
+            });
+            
+            function showLawParams(lawType) {
+                var allParams = document.querySelectorAll('.law-params');
+                for (var i = 0; i < allParams.length; i++) {
+                    allParams[i].classList.remove('active');
+                }
+                
+                var targetParams = document.getElementById(lawType + 'Params');
+                if (targetParams) {
+                    targetParams.classList.add('active');
+                }
+                
+                resetLaw();
+            }
+            
+            // Gestion des radios
+            var normalRadios = document.querySelectorAll('input[name="normalMode"]');
+            for (var i = 0; i < normalRadios.length; i++) {
+                normalRadios[i].addEventListener('change', function() {
+                    handleNormalModeChange(this.value);
+                });
+                
+                var parentLabel = normalRadios[i].closest('.radio-option');
+                if (parentLabel) {
+                    parentLabel.addEventListener('click', function() {
+                        var radio = this.querySelector('input[type="radio"]');
+                        if (radio) {
+                            radio.checked = true;
+                            var siblings = this.parentElement.querySelectorAll('.radio-option');
+                            for (var j = 0; j < siblings.length; j++) {
+                                siblings[j].classList.remove('selected');
+                            }
+                            this.classList.add('selected');
+                            
+                            var evt = document.createEvent('HTMLEvents');
+                            evt.initEvent('change', false, true);
+                            radio.dispatchEvent(evt);
+                        }
+                    });
+                }
+            }
+            
+            // Gestionnaires pour Student
+            setupRadioHandlers('studentMode', 'studentTGroup', 'studentPGroup');
+            
+            // Gestionnaires pour Chi-deux
+            setupRadioHandlers('chiMode', 'chiXGroup', 'chiPGroup');
+            
+            // Gestionnaires pour Fisher
+            setupRadioHandlers('fisherMode', 'fisherFGroup', 'fisherPGroup');
+            
+            function setupRadioHandlers(radioName, valueGroupId, pGroupId) {
+                var radios = document.querySelectorAll('input[name="' + radioName + '"]');
+                
+                for (var i = 0; i < radios.length; i++) {
+                    radios[i].addEventListener('change', function() {
+                        var mode = this.value;
+                        var valueGroup = document.getElementById(valueGroupId);
+                        var pGroup = document.getElementById(pGroupId);
+                        
+                        if (mode === 'p') {
+                            if (valueGroup) valueGroup.classList.add('hidden');
+                            if (pGroup) pGroup.classList.remove('hidden');
+                        } else {
+                            if (valueGroup) valueGroup.classList.remove('hidden');
+                            if (pGroup) pGroup.classList.add('hidden');
+                        }
+                    });
+                    
+                    var parentLabel = radios[i].closest('.radio-option');
+                    if (parentLabel) {
+                        parentLabel.addEventListener('click', function() {
+                            var radio = this.querySelector('input[type="radio"]');
+                            if (radio) {
+                                radio.checked = true;
+                                var siblings = this.parentElement.querySelectorAll('.radio-option');
+                                for (var j = 0; j < siblings.length; j++) {
+                                    siblings[j].classList.remove('selected');
+                                }
+                                this.classList.add('selected');
+                                
+                                var evt = document.createEvent('HTMLEvents');
+                                evt.initEvent('change', false, true);
+                                radio.dispatchEvent(evt);
+                            }
+                        });
+                    }
+                }
+            }
+            
+            function handleNormalModeChange(mode) {
+                var xGroup = document.getElementById('normalXGroup');
+                var pGroup = document.getElementById('normalPGroup');
+                
+                if (mode === 'p') {
+                    xGroup.classList.add('hidden');
+                    pGroup.classList.remove('hidden');
+                } else {
+                    xGroup.classList.remove('hidden');
+                    pGroup.classList.add('hidden');
+                }
+            }
+            
+            // Boutons
+            var btnCalculate = document.getElementById('btnCalculateLaw');
+            btnCalculate.addEventListener('click', calculateLaw);
+            
+            var btnReset = document.getElementById('btnResetLaw');
+            btnReset.addEventListener('click', resetLaw);
+            
+            function calculateLaw() {
+                var lawType = lawSelect.value;
+                
+                try {
+                    var result;
+                    if (lawType === 'normal') {
+                        result = calculateNormal();
+                    } else if (lawType === 'student') {
+                        result = calculateStudent();
+                    } else if (lawType === 'chisquare') {
+                        result = calculateChiSquare();
+                    } else if (lawType === 'fisher') {
+                        result = calculateFisher();
+                    }
+                    
+                    displayResult(result);
+                    drawDistribution(result);
+                } catch(error) {
+                    displayError(error.message);
+                }
+            }
+            
+            function calculateNormal() {
+                var mu = parseFloat(document.getElementById('normalMu').value);
+                var sigma = parseFloat(document.getElementById('normalSigma').value);
+                var modeRadio = document.querySelector('input[name="normalMode"]:checked');
+                var mode = 'x';
+                if (modeRadio) {
+                    mode = modeRadio.value;
+                }
+                
+                if (!Utils.isValidNumber(mu)) throw new Error('Moyenne invalide');
+                if (!Utils.isValidNumber(sigma) || sigma <= 0) throw new Error('Écart-type doit être supérieur à 0');
+                
+                if (mode === 'x') {
+                    var x = parseFloat(document.getElementById('normalX').value);
+                    if (!Utils.isValidNumber(x)) throw new Error('Valeur x invalide');
+                    
+                    var pLess = normalCDF(x, mu, sigma);
+                    var pGreater = 1 - pLess;
+                    
+                    return {
+                        type: 'normal',
+                        mode: 'x',
+                        params: { mu: mu, sigma: sigma, x: x },
+                        results: { pLess: pLess, pGreater: pGreater }
+                    };
+                } else {
+                    var p = parseFloat(document.getElementById('normalP').value);
+                    if (!Utils.isValidNumber(p) || p <= 0 || p >= 1) {
+                        throw new Error('Probabilité doit être entre 0 et 1');
+                    }
+                    
+                    var quantile = normalQuantile(p, mu, sigma);
+                    
+                    return {
+                        type: 'normal',
+                        mode: 'p',
+                        params: { mu: mu, sigma: sigma, p: p },
+                        results: { quantile: quantile }
+                    };
+                }
+            }
+            
+            function calculateStudent() {
+                var df = parseInt(document.getElementById('studentDf').value);
+                var modeRadio = document.querySelector('input[name="studentMode"]:checked');
+                var mode = 't';
+                if (modeRadio) {
+                    mode = modeRadio.value;
+                }
+                
+                if (!Utils.isValidNumber(df) || df < 1) throw new Error('Degrés de liberté doivent être >= 1');
+                
+                if (mode === 't') {
+                    var t = parseFloat(document.getElementById('studentT').value);
+                    if (!Utils.isValidNumber(t)) throw new Error('Valeur t invalide');
+                    
+                    var pLess = studentCDF(t, df);
+                    var pGreater = 1 - pLess;
+                    
+                    return {
+                        type: 'student',
+                        mode: 't',
+                        params: { df: df, t: t },
+                        results: { pLess: pLess, pGreater: pGreater }
+                    };
+                } else {
+                    var p = parseFloat(document.getElementById('studentP').value);
+                    if (!Utils.isValidNumber(p) || p <= 0 || p >= 1) {
+                        throw new Error('Probabilité doit être entre 0 et 1');
+                    }
+                    
+                    var quantile = studentQuantile(p, df);
+                    
+                    return {
+                        type: 'student',
+                        mode: 'p',
+                        params: { df: df, p: p },
+                        results: { quantile: quantile }
+                    };
+                }
+            }
+            
+            function calculateChiSquare() {
+                var df = parseInt(document.getElementById('chiDf').value);
+                var modeRadio = document.querySelector('input[name="chiMode"]:checked');
+                var mode = 'x';
+                if (modeRadio) {
+                    mode = modeRadio.value;
+                }
+                
+                if (!Utils.isValidNumber(df) || df < 1) throw new Error('Degrés de liberté doivent être >= 1');
+                
+                if (mode === 'x') {
+                    var x = parseFloat(document.getElementById('chiX').value);
+                    if (!Utils.isValidNumber(x) || x < 0) throw new Error('Valeur χ² invalide (doit être >= 0)');
+                    
+                    var pLess = chi2CDF(x, df);
+                    var pGreater = 1 - pLess;
+                    
+                    return {
+                        type: 'chisquare',
+                        mode: 'x',
+                        params: { df: df, x: x },
+                        results: { pLess: pLess, pGreater: pGreater }
+                    };
+                } else {
+                    var p = parseFloat(document.getElementById('chiP').value);
+                    if (!Utils.isValidNumber(p) || p <= 0 || p >= 1) {
+                        throw new Error('Probabilité doit être entre 0 et 1');
+                    }
+                    
+                    var quantile = chi2Quantile(1 - p, df);
+                    
+                    return {
+                        type: 'chisquare',
+                        mode: 'p',
+                        params: { df: df, p: p },
+                        results: { quantile: quantile }
+                    };
+                }
+            }
+            
+            function calculateFisher() {
+                var df1 = parseInt(document.getElementById('fisherDf1').value);
+                var df2 = parseInt(document.getElementById('fisherDf2').value);
+                var modeRadio = document.querySelector('input[name="fisherMode"]:checked');
+                var mode = 'f';
+                if (modeRadio) {
+                    mode = modeRadio.value;
+                }
+                
+                if (!Utils.isValidNumber(df1) || df1 < 1) throw new Error('ddl₁ doit être >= 1');
+                if (!Utils.isValidNumber(df2) || df2 < 1) throw new Error('ddl₂ doit être >= 1');
+                
+                if (mode === 'f') {
+                    var f = parseFloat(document.getElementById('fisherF').value);
+                    if (!Utils.isValidNumber(f) || f < 0) throw new Error('Valeur F invalide (doit être >= 0)');
+                    
+                    var pLess = fisherCDF(f, df1, df2);
+                    var pGreater = 1 - pLess;
+                    
+                    return {
+                        type: 'fisher',
+                        mode: 'f',
+                        params: { df1: df1, df2: df2, f: f },
+                        results: { pLess: pLess, pGreater: pGreater }
+                    };
+                } else {
+                    var p = parseFloat(document.getElementById('fisherP').value);
+                    if (!Utils.isValidNumber(p) || p <= 0 || p >= 1) {
+                        throw new Error('Probabilité doit être entre 0 et 1');
+                    }
+                    
+                    // p représente P(F > f), donc on cherche le quantile pour 1-p
+                    var quantile = fisherQuantile(1 - p, df1, df2);
+                    
+                    return {
+                        type: 'fisher',
+                        mode: 'p',
+                        params: { df1: df1, df2: df2, p: p },
+                        results: { quantile: quantile }
+                    };
+                }
+            }
+            
+            function displayResult(result) {
+                var resultDiv = document.getElementById('lawResult');
+                var html = '<div class="result-card">';
+                
+                html += '<div class="result-header">📊 Résultats</div>';
+                html += '<div class="result-stats">';
+                
+                if (result.mode === 'x' || result.mode === 't' || result.mode === 'f') {
+                    if (result.results.pLess !== undefined) {
+                        var varLabel = 'X';
+                        if (result.type === 'student') varLabel = 'T';
+                        else if (result.type === 'chisquare') varLabel = 'χ²';
+                        else if (result.type === 'fisher') varLabel = 'F';
+                        
+                        html += '<div class="stat-item">';
+                        html += '<div class="stat-label">P(' + varLabel + ' &lt; x)</div>';
+                        html += '<div class="stat-value">' + Utils.formatNumber(result.results.pLess) + '</div>';
+                        html += '</div>';
+                        html += '<div class="stat-item">';
+                        html += '<div class="stat-label">P(' + varLabel + ' &gt; x)</div>';
+                        html += '<div class="stat-value">' + Utils.formatNumber(result.results.pGreater) + '</div>';
+                        html += '</div>';
+                    }
+                } else {
+                    html += '<div class="stat-item">';
+                    html += '<div class="stat-label">Quantile (x)</div>';
+                    html += '<div class="stat-value">' + Utils.formatNumber(result.results.quantile) + '</div>';
+                    html += '</div>';
+                }
+                
+                html += '</div></div>';
+                
+                resultDiv.innerHTML = html;
+                resultDiv.classList.remove('hidden');
+            }
+            
+            function displayError(message) {
+                var resultDiv = document.getElementById('lawResult');
+                resultDiv.innerHTML = '<div class="result-card" style="border-color: var(--danger); background: rgba(239, 68, 68, 0.05);"><div class="result-header">⚠️ Erreur</div><p style="margin-top: 1rem;">' + message + '</p></div>';
+                resultDiv.classList.remove('hidden');
+            }
+            
+            function drawDistribution(result) {
+                var container = document.getElementById('lawCanvasContainer');
+                var canvas = document.getElementById('lawCanvas');
+                var ctx = canvas.getContext('2d');
+                
+                container.classList.remove('hidden');
+                
+                // Configuration haute résolution pour écrans Retina
+                var dpr = window.devicePixelRatio || 1;
+                var rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                ctx.scale(dpr, dpr);
+                
+                var width = rect.width;
+                var height = rect.height;
+                var padding = 60;
+                var plotWidth = width - 2 * padding;
+                var plotHeight = height - 2 * padding;
+                
+                // Calcul des paramètres selon le type de loi
+                var xMin, xMax, yMax, pdfFunc, title;
+                
+                if (result.type === 'normal') {
+                    var mu = result.params.mu;
+                    var sigma = result.params.sigma;
+                    xMin = mu - 4 * sigma;
+                    xMax = mu + 4 * sigma;
+                    yMax = 1 / (sigma * Math.sqrt(2 * Math.PI));
+                    pdfFunc = function(x) {
+                        var z = (x - mu) / sigma;
+                        return (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * z * z);
+                    };
+                    title = 'Distribution Normale N(' + Utils.formatNumber(mu, 1) + ', ' + Utils.formatNumber(sigma, 1) + ')';
+                } else if (result.type === 'student') {
+                    var df = result.params.df;
+                    xMin = -5;
+                    xMax = 5;
+                    yMax = studentPDF(0, df);
+                    pdfFunc = function(x) { return studentPDF(x, df); };
+                    title = 'Distribution de Student (ddl = ' + df + ')';
+                } else if (result.type === 'chisquare') {
+                    var df = result.params.df;
+                    xMin = 0.01; // Éviter 0 pour le gradient
+                    xMax = df + 4 * Math.sqrt(2 * df);
+                    yMax = chi2PDF(df > 2 ? df - 2 : 0.5, df);
+                    pdfFunc = function(x) { return chi2PDF(x, df); };
+                    title = 'Distribution du Chi-deux (ddl = ' + df + ')';
+                } else if (result.type === 'fisher') {
+                    var df1 = result.params.df1;
+                    var df2 = result.params.df2;
+                    xMin = 0.01; // Éviter 0
+                    xMax = 5;
+                    yMax = fisherPDF(1, df1, df2);
+                    pdfFunc = function(x) { return fisherPDF(x, df1, df2); };
+                    title = 'Distribution de Fisher (ddl₁ = ' + df1 + ', ddl₂ = ' + df2 + ')';
+                }
+                
+                // Recalculer yMax en scannant la courbe
+                var tempYMax = 0;
+                for (var x = xMin; x <= xMax; x += (xMax - xMin) / 100) {
+                    var y = pdfFunc(x);
+                    if (y > tempYMax && isFinite(y)) tempYMax = y;
+                }
+                if (tempYMax > 0) yMax = tempYMax;
+                
+                var scaleX = plotWidth / (xMax - xMin);
+                var toCanvasX = function(x) { return padding + (x - xMin) * scaleX; };
+                
+                var scaleY = plotHeight / (yMax * 1.2);
+                var toCanvasY = function(y) { return height - padding - y * scaleY; };
+                
+                // Fond avec dégradé subtil
+                var bgGradient = ctx.createLinearGradient(0, 0, 0, height);
+                bgGradient.addColorStop(0, '#fafbff');
+                bgGradient.addColorStop(1, '#f0f4ff');
+                ctx.fillStyle = bgGradient;
+                ctx.fillRect(0, 0, width, height);
+                
+                // Grille verticale subtile
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.05)';
+                ctx.lineWidth = 1;
+                for (var i = 0; i <= 8; i++) {
+                    var x = xMin + (xMax - xMin) * (i / 8);
+                    ctx.beginPath();
+                    ctx.moveTo(toCanvasX(x), padding);
+                    ctx.lineTo(toCanvasX(x), height - padding);
+                    ctx.stroke();
+                }
+                
+                // Grille horizontale subtile
+                for (var i = 0; i <= 5; i++) {
+                    var y = yMax * (i / 5);
+                    ctx.beginPath();
+                    ctx.moveTo(padding, toCanvasY(y));
+                    ctx.lineTo(width - padding, toCanvasY(y));
+                    ctx.stroke();
+                }
+                
+                // Zone colorée si mode x/t/f (AVANT la courbe)
+                if (result.mode === 'x' || result.mode === 't' || result.mode === 'f') {
+                    var xVal;
+                    if (result.mode === 'x') xVal = result.params.x;
+                    else if (result.mode === 't') xVal = result.params.t;
+                    else if (result.mode === 'f') xVal = result.params.f;
+                    
+                    // Vérifier que xVal est dans les limites et que les positions sont valides
+                    if (xVal >= xMin && xVal <= xMax) {
+                        var startX = toCanvasX(xMin);
+                        var endX = toCanvasX(xVal);
+                        
+                        // Vérifier que les valeurs sont finies avant de créer le gradient
+                        if (isFinite(startX) && isFinite(endX) && startX !== endX) {
+                            // Dégradé pour la zone
+                            var areaGradient = ctx.createLinearGradient(startX, 0, endX, 0);
+                            areaGradient.addColorStop(0, 'rgba(99, 102, 241, 0.15)');
+                            areaGradient.addColorStop(1, 'rgba(99, 102, 241, 0.35)');
+                            ctx.fillStyle = areaGradient;
+                        } else {
+                            // Fallback : couleur unie si le gradient ne peut pas être créé
+                            ctx.fillStyle = 'rgba(99, 102, 241, 0.25)';
+                        }
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(toCanvasX(xMin), toCanvasY(0));
+                        
+                        for (var x = xMin; x <= Math.min(xVal, xMax); x += (xMax - xMin) / 300) {
+                            var y = pdfFunc(x);
+                            if (isFinite(y)) {
+                                ctx.lineTo(toCanvasX(x), toCanvasY(y));
+                            }
+                        }
+                        
+                        ctx.lineTo(toCanvasX(Math.min(xVal, xMax)), toCanvasY(0));
+                        ctx.closePath();
+                        ctx.fill();
+                        
+                        // Bordure de la zone
+                        ctx.strokeStyle = 'rgba(99, 102, 241, 0.5)';
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    }
+                }
+                
+                // Axes principaux
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
+                ctx.shadowBlur = 3;
+                ctx.shadowOffsetY = 1;
+                ctx.strokeStyle = '#374151';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(padding, height - padding);
+                ctx.lineTo(width - padding, height - padding);
+                ctx.moveTo(padding, padding);
+                ctx.lineTo(padding, height - padding);
+                ctx.stroke();
+                ctx.shadowColor = 'transparent';
+                
+                // Courbe principale
+                var curveGradient = ctx.createLinearGradient(0, padding, 0, height - padding);
+                curveGradient.addColorStop(0, '#4f46e5');
+                curveGradient.addColorStop(1, '#6366f1');
+                ctx.strokeStyle = curveGradient;
+                ctx.lineWidth = 3;
+                ctx.shadowColor = 'rgba(99, 102, 241, 0.3)';
+                ctx.shadowBlur = 5;
+                
+                ctx.beginPath();
+                var first = true;
+                for (var x = xMin; x <= xMax; x += (xMax - xMin) / 300) {
+                    var y = pdfFunc(x);
+                    if (isFinite(y)) {
+                        var canvasX = toCanvasX(x);
+                        var canvasY = toCanvasY(y);
+                        
+                        if (first) {
+                            ctx.moveTo(canvasX, canvasY);
+                            first = false;
+                        } else {
+                            ctx.lineTo(canvasX, canvasY);
+                        }
+                    }
+                }
+                ctx.stroke();
+                ctx.shadowColor = 'transparent';
+                
+                // Ligne verticale à la valeur critique
+                if (result.mode === 'x' || result.mode === 't' || result.mode === 'f') {
+                    var xVal;
+                    if (result.mode === 'x') xVal = result.params.x;
+                    else if (result.mode === 't') xVal = result.params.t;
+                    else if (result.mode === 'f') xVal = result.params.f;
+                    
+                    if (xVal >= xMin && xVal <= xMax) {
+                        ctx.strokeStyle = '#ef4444';
+                        ctx.lineWidth = 2.5;
+                        ctx.setLineDash([8, 4]);
+                        ctx.beginPath();
+                        ctx.moveTo(toCanvasX(xVal), height - padding);
+                        var yVal = pdfFunc(xVal);
+                        if (isFinite(yVal)) {
+                            ctx.lineTo(toCanvasX(xVal), toCanvasY(yVal));
+                        }
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                        
+                        // Point sur la courbe
+                        if (isFinite(yVal)) {
+                            ctx.fillStyle = '#ef4444';
+                            ctx.beginPath();
+                            ctx.arc(toCanvasX(xVal), toCanvasY(yVal), 5, 0, 2 * Math.PI);
+                            ctx.fill();
+                            ctx.strokeStyle = 'white';
+                            ctx.lineWidth = 2;
+                            ctx.stroke();
+                        }
+                    }
+                }
+                
+                // Annotations de l'axe X
+                ctx.fillStyle = '#374151';
+                ctx.font = 'bold 13px system-ui';
+                ctx.textAlign = 'center';
+                
+                for (var i = 0; i <= 8; i++) {
+                    var x = xMin + (xMax - xMin) * (i / 8);
+                    var label = Utils.formatNumber(x, 2);
+                    ctx.fillText(label, toCanvasX(x), height - padding + 25);
+                    
+                    ctx.strokeStyle = '#374151';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(toCanvasX(x), height - padding);
+                    ctx.lineTo(toCanvasX(x), height - padding + 5);
+                    ctx.stroke();
+                }
+                
+                // Label de l'axe X
+                ctx.font = 'bold 14px system-ui';
+                ctx.fillText('Valeur (x)', width / 2, height - 5);
+                
+                // Annotations de l'axe Y
+                ctx.textAlign = 'right';
+                ctx.font = 'bold 12px system-ui';
+                for (var i = 0; i <= 5; i++) {
+                    var y = yMax * (i / 5);
+                    var label = Utils.formatNumber(y, 3);
+                    ctx.fillText(label, padding - 10, toCanvasY(y) + 4);
+                    
+                    ctx.strokeStyle = '#374151';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(padding - 5, toCanvasY(y));
+                    ctx.lineTo(padding, toCanvasY(y));
+                    ctx.stroke();
+                }
+                
+                // Label de l'axe Y (vertical)
+                ctx.save();
+                ctx.translate(15, height / 2);
+                ctx.rotate(-Math.PI / 2);
+                ctx.textAlign = 'center';
+                ctx.font = 'bold 14px system-ui';
+                ctx.fillText('Densité de probabilité', 0, 0);
+                ctx.restore();
+                
+                // Titre du graphique
+                ctx.fillStyle = '#1f2937';
+                ctx.font = 'bold 16px system-ui';
+                ctx.textAlign = 'center';
+                ctx.fillText(title, width / 2, 25);
+                
+                // Légende
+                var legendY = 50;
+                ctx.textAlign = 'left';
+                ctx.font = '13px system-ui';
+                
+                // Légende courbe
+                ctx.fillStyle = '#6366f1';
+                ctx.fillRect(width - 180, legendY - 8, 20, 3);
+                ctx.fillStyle = '#374151';
+                ctx.fillText('Densité', width - 155, legendY);
+                
+                if (result.mode === 'x' || result.mode === 't' || result.mode === 'f') {
+                    if (result.results.pLess !== undefined) {
+                        legendY += 20;
+                        // Légende zone
+                        ctx.fillStyle = 'rgba(99, 102, 241, 0.25)';
+                        ctx.fillRect(width - 180, legendY - 10, 20, 12);
+                        ctx.fillStyle = '#374151';
+                        var varLabel = 'X';
+                        if (result.type === 'student') varLabel = 'T';
+                        else if (result.type === 'chisquare') varLabel = 'χ²';
+                        else if (result.type === 'fisher') varLabel = 'F';
+                        ctx.fillText('P(' + varLabel + ' < x) = ' + Utils.formatNumber(result.results.pLess, 3), width - 155, legendY);
+                        
+                        legendY += 20;
+                        // Légende ligne verticale
+                        ctx.strokeStyle = '#ef4444';
+                        ctx.lineWidth = 2.5;
+                        ctx.setLineDash([6, 3]);
+                        ctx.beginPath();
+                        ctx.moveTo(width - 180, legendY - 5);
+                        ctx.lineTo(width - 160, legendY - 5);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                        ctx.fillStyle = '#374151';
+                        var xVal;
+                        if (result.mode === 'x') xVal = result.params.x;
+                        else if (result.mode === 't') xVal = result.params.t;
+                        else if (result.mode === 'f') xVal = result.params.f;
+                        ctx.fillText('x = ' + Utils.formatNumber(xVal, 2), width - 155, legendY);
+                    }
+                }
+            }
+            
+            function resetLaw() {
+                document.getElementById('lawResult').classList.add('hidden');
+                document.getElementById('lawCanvasContainer').classList.add('hidden');
+            }
+            
+            
+            // ========== ONGLET 2: TESTS D'HYPOTHÈSES ==========
+            
+            var testSelect = document.getElementById('testSelect');
+            if (testSelect) {
+                testSelect.addEventListener('change', function() {
+                    showTestParams(this.value);
+                });
+            }
+            
+            function showTestParams(testType) {
+                var allParams = document.querySelectorAll('#tab-tests .law-params');
+                for (var i = 0; i < allParams.length; i++) {
+                    allParams[i].classList.remove('active');
+                }
+                
+                var targetParams = document.getElementById(testType + 'Params');
+                if (targetParams) {
+                    targetParams.classList.add('active');
+                }
+                
+                resetTest();
+            }
+            
+            // Slider alpha pour tests
+            var testAlpha = document.getElementById('testAlpha');
+            if (testAlpha) {
+                testAlpha.addEventListener('input', function() {
+                    document.getElementById('testAlphaValue').textContent = this.value;
+                });
+            }
+            
+            // Setup radio buttons pour tests
+            setupTestRadioHandlers('ztestType');
+            setupTestRadioHandlers('ttestType');
+            setupTestRadioHandlers('chitestType');
+            setupTestRadioHandlers('ftestType');
+            
+            function setupTestRadioHandlers(radioName) {
+                var radios = document.querySelectorAll('input[name="' + radioName + '"]');
+                for (var i = 0; i < radios.length; i++) {
+                    var parentLabel = radios[i].closest('.radio-option');
+                    if (parentLabel) {
+                        parentLabel.addEventListener('click', function() {
+                            var radio = this.querySelector('input[type="radio"]');
+                            if (radio) {
+                                radio.checked = true;
+                                var siblings = this.parentElement.querySelectorAll('.radio-option');
+                                for (var j = 0; j < siblings.length; j++) {
+                                    siblings[j].classList.remove('selected');
+                                }
+                                this.classList.add('selected');
+                            }
+                        });
+                    }
+                }
+            }
+            
+            var btnCalculateTest = document.getElementById('btnCalculateTest');
+            if (btnCalculateTest) {
+                btnCalculateTest.addEventListener('click', calculateTest);
+            }
+            
+            var btnResetTest = document.getElementById('btnResetTest');
+            if (btnResetTest) {
+                btnResetTest.addEventListener('click', resetTest);
+            }
+            
+            function calculateTest() {
+                var testType = testSelect.value;
+                var alpha = parseFloat(document.getElementById('testAlpha').value);
+                
+                try {
+                    var result;
+                    if (testType === 'ztest') {
+                        result = calculateZTest(alpha);
+                    } else if (testType === 'ttest') {
+                        result = calculateTTest(alpha);
+                    } else if (testType === 'chitest') {
+                        result = calculateChiTest(alpha);
+                    } else if (testType === 'ftest') {
+                        result = calculateFTest(alpha);
+                    }
+                    
+                    displayTestResult(result);
+                } catch(error) {
+                    displayTestError(error.message);
+                }
+            }
+            
+            function calculateZTest(alpha) {
+                var mu0 = parseFloat(document.getElementById('zMu0').value);
+                var sigma = parseFloat(document.getElementById('zSigma').value);
+                var xbar = parseFloat(document.getElementById('zXbar').value);
+                var n = parseInt(document.getElementById('zN').value);
+                var typeRadio = document.querySelector('input[name="ztestType"]:checked');
+                var testType = typeRadio ? typeRadio.value : 'bilateral';
+                
+                if (!Utils.isValidNumber(mu0)) throw new Error('μ₀ invalide');
+                if (!Utils.isValidNumber(sigma) || sigma <= 0) throw new Error('σ doit être > 0');
+                if (!Utils.isValidNumber(xbar)) throw new Error('x̄ invalide');
+                if (!Utils.isValidNumber(n) || n < 2) throw new Error('n doit être >= 2');
+                
+                var z = (xbar - mu0) / (sigma / Math.sqrt(n));
+                var pValue, criticalValue, reject;
+                
+                if (testType === 'bilateral') {
+                    pValue = 2 * (1 - normalCDF(Math.abs(z), 0, 1));
+                    criticalValue = normalQuantile(1 - alpha / 2, 0, 1);
+                    reject = Math.abs(z) > criticalValue;
+                } else if (testType === 'left') {
+                    pValue = normalCDF(z, 0, 1);
+                    criticalValue = normalQuantile(alpha, 0, 1);
+                    reject = z < criticalValue;
+                } else {
+                    pValue = 1 - normalCDF(z, 0, 1);
+                    criticalValue = normalQuantile(1 - alpha, 0, 1);
+                    reject = z > criticalValue;
+                }
+                
+                return {
+                    testName: 'Test Z',
+                    testType: testType,
+                    alpha: alpha,
+                    statistic: z,
+                    pValue: pValue,
+                    criticalValue: criticalValue,
+                    reject: reject,
+                    h0: 'μ = ' + mu0,
+                    h1: getH1(testType, 'μ', mu0)
+                };
+            }
+            
+            function calculateTTest(alpha) {
+                var mu0 = parseFloat(document.getElementById('tMu0').value);
+                var xbar = parseFloat(document.getElementById('tXbar').value);
+                var s = parseFloat(document.getElementById('tS').value);
+                var n = parseInt(document.getElementById('tN').value);
+                var typeRadio = document.querySelector('input[name="ttestType"]:checked');
+                var testType = typeRadio ? typeRadio.value : 'bilateral';
+                
+                if (!Utils.isValidNumber(mu0)) throw new Error('μ₀ invalide');
+                if (!Utils.isValidNumber(xbar)) throw new Error('x̄ invalide');
+                if (!Utils.isValidNumber(s) || s <= 0) throw new Error('s doit être > 0');
+                if (!Utils.isValidNumber(n) || n < 2) throw new Error('n doit être >= 2');
+                
+                var df = n - 1;
+                var t = (xbar - mu0) / (s / Math.sqrt(n));
+                var pValue, criticalValue, reject;
+                
+                if (testType === 'bilateral') {
+                    pValue = 2 * (1 - studentCDF(Math.abs(t), df));
+                    criticalValue = studentQuantile(1 - alpha / 2, df);
+                    reject = Math.abs(t) > criticalValue;
+                } else if (testType === 'left') {
+                    pValue = studentCDF(t, df);
+                    criticalValue = studentQuantile(alpha, df);
+                    reject = t < criticalValue;
+                } else {
+                    pValue = 1 - studentCDF(t, df);
+                    criticalValue = studentQuantile(1 - alpha, df);
+                    reject = t > criticalValue;
+                }
+                
+                return {
+                    testName: 'Test t de Student',
+                    testType: testType,
+                    alpha: alpha,
+                    df: df,
+                    statistic: t,
+                    pValue: pValue,
+                    criticalValue: criticalValue,
+                    reject: reject,
+                    h0: 'μ = ' + mu0,
+                    h1: getH1(testType, 'μ', mu0)
+                };
+            }
+            
+            function calculateChiTest(alpha) {
+                var var0 = parseFloat(document.getElementById('chiVar0').value);
+                var s2 = parseFloat(document.getElementById('chiS2').value);
+                var n = parseInt(document.getElementById('chiN').value);
+                var typeRadio = document.querySelector('input[name="chitestType"]:checked');
+                var testType = typeRadio ? typeRadio.value : 'bilateral';
+                
+                if (!Utils.isValidNumber(var0) || var0 <= 0) throw new Error('σ₀² doit être > 0');
+                if (!Utils.isValidNumber(s2) || s2 <= 0) throw new Error('s² doit être > 0');
+                if (!Utils.isValidNumber(n) || n < 2) throw new Error('n doit être >= 2');
+                
+                var df = n - 1;
+                var chi2 = (df * s2) / var0;
+                var pValue, criticalValue, reject;
+                
+                if (testType === 'bilateral') {
+                    var pLower = chi2CDF(chi2, df);
+                    var pUpper = 1 - pLower;
+                    pValue = 2 * Math.min(pLower, pUpper);
+                    var critLower = chi2Quantile(alpha / 2, df);
+                    var critUpper = chi2Quantile(1 - alpha / 2, df);
+                    reject = chi2 < critLower || chi2 > critUpper;
+                    criticalValue = '[' + Utils.formatNumber(critLower, 3) + ', ' + Utils.formatNumber(critUpper, 3) + ']';
+                } else if (testType === 'left') {
+                    pValue = chi2CDF(chi2, df);
+                    criticalValue = chi2Quantile(alpha, df);
+                    reject = chi2 < criticalValue;
+                } else {
+                    pValue = 1 - chi2CDF(chi2, df);
+                    criticalValue = chi2Quantile(1 - alpha, df);
+                    reject = chi2 > criticalValue;
+                }
+                
+                return {
+                    testName: 'Test du Chi-deux',
+                    testType: testType,
+                    alpha: alpha,
+                    df: df,
+                    statistic: chi2,
+                    pValue: pValue,
+                    criticalValue: criticalValue,
+                    reject: reject,
+                    h0: 'σ² = ' + var0,
+                    h1: getH1(testType, 'σ²', var0)
+                };
+            }
+            
+            function calculateFTest(alpha) {
+                var s1 = parseFloat(document.getElementById('fS1').value);
+                var n1 = parseInt(document.getElementById('fN1').value);
+                var s2 = parseFloat(document.getElementById('fS2').value);
+                var n2 = parseInt(document.getElementById('fN2').value);
+                var typeRadio = document.querySelector('input[name="ftestType"]:checked');
+                var testType = typeRadio ? typeRadio.value : 'bilateral';
+                
+                if (!Utils.isValidNumber(s1) || s1 <= 0) throw new Error('s₁² doit être > 0');
+                if (!Utils.isValidNumber(s2) || s2 <= 0) throw new Error('s₂² doit être > 0');
+                if (!Utils.isValidNumber(n1) || n1 < 2) throw new Error('n₁ doit être >= 2');
+                if (!Utils.isValidNumber(n2) || n2 < 2) throw new Error('n₂ doit être >= 2');
+                
+                var df1 = n1 - 1;
+                var df2 = n2 - 1;
+                var f = s1 / s2;
+                var pValue, criticalValue, reject;
+                
+                if (testType === 'bilateral') {
+                    var pLower = fisherCDF(f, df1, df2);
+                    var pUpper = 1 - pLower;
+                    pValue = 2 * Math.min(pLower, pUpper);
+                    var critLower = fisherQuantile(alpha / 2, df1, df2);
+                    var critUpper = fisherQuantile(1 - alpha / 2, df1, df2);
+                    reject = f < critLower || f > critUpper;
+                    criticalValue = '[' + Utils.formatNumber(critLower, 3) + ', ' + Utils.formatNumber(critUpper, 3) + ']';
+                } else if (testType === 'left') {
+                    pValue = fisherCDF(f, df1, df2);
+                    criticalValue = fisherQuantile(alpha, df1, df2);
+                    reject = f < criticalValue;
+                } else {
+                    pValue = 1 - fisherCDF(f, df1, df2);
+                    criticalValue = fisherQuantile(1 - alpha, df1, df2);
+                    reject = f > criticalValue;
+                }
+                
+                return {
+                    testName: 'Test F de Fisher',
+                    testType: testType,
+                    alpha: alpha,
+                    df1: df1,
+                    df2: df2,
+                    statistic: f,
+                    pValue: pValue,
+                    criticalValue: criticalValue,
+                    reject: reject,
+                    h0: 'σ₁² = σ₂²',
+                    h1: getH1(testType, 'σ₁²', 'σ₂²')
+                };
+            }
+            
+            function getH1(testType, param, value) {
+                if (testType === 'bilateral') {
+                    return param + ' ≠ ' + value;
+                } else if (testType === 'left') {
+                    return param + ' < ' + value;
+                } else {
+                    return param + ' > ' + value;
+                }
+            }
+            
+            function displayTestResult(result) {
+                var resultDiv = document.getElementById('testResult');
+                var html = '<div class="result-card">';
+                
+                html += '<div class="result-header">🧪 ' + result.testName + '</div>';
+                
+                // Hypothèses
+                html += '<div style="margin: 1.5rem 0; padding: 1rem; background: white; border-radius: 8px;">';
+                html += '<strong>H₀:</strong> ' + result.h0 + '<br>';
+                html += '<strong>H₁:</strong> ' + result.h1;
+                html += '</div>';
+                
+                // Statistiques
+                html += '<div class="result-stats">';
+                html += '<div class="stat-item">';
+                html += '<div class="stat-label">Statistique de test</div>';
+                html += '<div class="stat-value">' + Utils.formatNumber(result.statistic) + '</div>';
+                html += '</div>';
+                html += '<div class="stat-item">';
+                html += '<div class="stat-label">p-value</div>';
+                html += '<div class="stat-value">' + Utils.formatNumber(result.pValue) + '</div>';
+                html += '</div>';
+                html += '<div class="stat-item">';
+                html += '<div class="stat-label">Valeur critique (α=' + result.alpha + ')</div>';
+                html += '<div class="stat-value">';
+                if (typeof result.criticalValue === 'string') {
+                    html += result.criticalValue;
+                } else {
+                    html += Utils.formatNumber(result.criticalValue);
+                }
+                html += '</div>';
+                html += '</div>';
+                html += '</div>';
+                
+                // Décision
+                var decisionClass = result.reject ? 'reject' : 'accept';
+                var decisionText = result.reject ? '✅ H₀ REJETÉE' : '❌ H₀ ACCEPTÉE';
+                var interpretText = result.reject ? 
+                    'La différence est <strong>statistiquement significative</strong>.' :
+                    'La différence n\'est <strong>pas statistiquement significative</strong>.';
+                
+                html += '<div class="decision-box ' + decisionClass + '">';
+                html += '<div class="decision-title">' + decisionText + '</div>';
+                html += '<p style="margin-top: 0.5rem;">' + interpretText + '</p>';
+                html += '<p style="margin-top: 1rem; font-size: 0.9rem;">';
+                html += 'p-value (' + Utils.formatNumber(result.pValue) + ') ';
+                html += result.reject ? '&lt;' : '≥';
+                html += ' α (' + result.alpha.toFixed(2) + ')';
+                html += '</p>';
+                html += '</div>';
+                
+                html += '</div>';
+                
+                resultDiv.innerHTML = html;
+                resultDiv.classList.remove('hidden');
+            }
+            
+            function displayTestError(message) {
+                var resultDiv = document.getElementById('testResult');
+                resultDiv.innerHTML = '<div class="result-card" style="border-color: var(--danger); background: rgba(239, 68, 68, 0.05);"><div class="result-header">⚠️ Erreur</div><p style="margin-top: 1rem;">' + message + '</p></div>';
+                resultDiv.classList.remove('hidden');
+            }
+            
+            function resetTest() {
+                document.getElementById('testResult').classList.add('hidden');
+            }
+            
+            // ========== ONGLET 3: TESTS DE NORMALITÉ ==========
+            
+            var normalityData = document.getElementById('normalityData');
+            if (normalityData) {
+                normalityData.addEventListener('input', function() {
+                    var data = parseData(this.value);
+                    var countDiv = document.getElementById('dataCount');
+                    if (data.length > 0) {
+                        countDiv.textContent = data.length + ' valeurs';
+                        countDiv.classList.remove('hidden');
+                    } else {
+                        countDiv.classList.add('hidden');
+                    }
+                });
+            }
+            
+            var normalityAlpha = document.getElementById('normalityAlpha');
+            if (normalityAlpha) {
+                normalityAlpha.addEventListener('input', function() {
+                    document.getElementById('normalityAlphaValue').textContent = this.value;
+                });
+            }
+            
+            var btnTestNormality = document.getElementById('btnTestNormality');
+            if (btnTestNormality) {
+                btnTestNormality.addEventListener('click', testNormality);
+            }
+            
+            var btnResetNormality = document.getElementById('btnResetNormality');
+            if (btnResetNormality) {
+                btnResetNormality.addEventListener('click', resetNormality);
+            }
+            
+            function parseData(text) {
+                var values = text.split(/[\s,;]+/).filter(function(v) { return v.trim() !== ''; });
+                var numbers = [];
+                for (var i = 0; i < values.length; i++) {
+                    var num = parseFloat(values[i]);
+                    if (!isNaN(num) && isFinite(num)) {
+                        numbers.push(num);
+                    }
+                }
+                return numbers;
+            }
+            
+            function testNormality() {
+                var text = normalityData.value;
+                var data = parseData(text);
+                var alpha = parseFloat(document.getElementById('normalityAlpha').value);
+                
+                if (data.length < 3) {
+                    displayNormalityError('Au moins 3 valeurs sont nécessaires');
+                    return;
+                }
+                
+                if (data.length > 5000) {
+                    displayNormalityError('Maximum 5000 valeurs');
+                    return;
+                }
+                
+                try {
+                    var results = {
+                        data: data,
+                        alpha: alpha,
+                        stats: calculateDescriptiveStats(data),
+                        jarqueBera: calculateJarqueBera(data),
+                        shapiroWilk: data.length <= 2000 ? calculateShapiroWilk(data) : null
+                    };
+                    
+                    displayNormalityResults(results);
+                    drawHistogram(data);
+                } catch(error) {
+                    displayNormalityError(error.message);
+                }
+            }
+            
+            function calculateDescriptiveStats(data) {
+                var n = data.length;
+                var mean = 0;
+                for (var i = 0; i < n; i++) {
+                    mean += data[i];
+                }
+                mean /= n;
+                
+                var variance = 0;
+                for (var i = 0; i < n; i++) {
+                    variance += (data[i] - mean) * (data[i] - mean);
+                }
+                variance /= n;
+                var std = Math.sqrt(variance);
+                
+                var sorted = data.slice().sort(function(a, b) { return a - b; });
+                var median = n % 2 === 0 ? 
+                    (sorted[n / 2 - 1] + sorted[n / 2]) / 2 :
+                    sorted[Math.floor(n / 2)];
+                
+                var skewness = 0;
+                var kurtosis = 0;
+                for (var i = 0; i < n; i++) {
+                    var z = (data[i] - mean) / std;
+                    skewness += z * z * z;
+                    kurtosis += z * z * z * z;
+                }
+                skewness = (skewness / n);
+                kurtosis = (kurtosis / n) - 3;
+                
+                return {
+                    n: n,
+                    mean: mean,
+                    std: std,
+                    median: median,
+                    min: sorted[0],
+                    max: sorted[n - 1],
+                    skewness: skewness,
+                    kurtosis: kurtosis
+                };
+            }
+            
+            function calculateJarqueBera(data) {
+                var n = data.length;
+                var mean = 0;
+                for (var i = 0; i < n; i++) {
+                    mean += data[i];
+                }
+                mean /= n;
+                
+                var variance = 0;
+                for (var i = 0; i < n; i++) {
+                    variance += (data[i] - mean) * (data[i] - mean);
+                }
+                variance /= n;
+                var std = Math.sqrt(variance);
+                
+                var skewness = 0;
+                var kurtosis = 0;
+                for (var i = 0; i < n; i++) {
+                    var z = (data[i] - mean) / std;
+                    skewness += z * z * z;
+                    kurtosis += z * z * z * z;
+                }
+                skewness = skewness / n;
+                kurtosis = (kurtosis / n) - 3;
+                
+                var jb = (n / 6) * (skewness * skewness + (kurtosis * kurtosis) / 4);
+                var pValue = 1 - chi2CDF(jb, 2);
+                
+                return {
+                    statistic: jb,
+                    pValue: pValue
+                };
+            }
+            
+            function calculateShapiroWilk(data) {
+                // Approximation simplifiée du test de Shapiro-Wilk
+                var n = data.length;
+                var sorted = data.slice().sort(function(a, b) { return a - b; });
+                
+                var mean = 0;
+                for (var i = 0; i < n; i++) {
+                    mean += sorted[i];
+                }
+                mean /= n;
+                
+                var ss = 0;
+                for (var i = 0; i < n; i++) {
+                    ss += (sorted[i] - mean) * (sorted[i] - mean);
+                }
+                
+                var b = 0;
+                var k = Math.floor(n / 2);
+                for (var i = 0; i < k; i++) {
+                    var coef = 1.0;
+                    b += coef * (sorted[n - 1 - i] - sorted[i]);
+                }
+                
+                var w = (b * b) / ss;
+                
+                // Approximation de la p-value
+                var pValue = 0.5;
+                if (w < 0.9) pValue = 0.01;
+                else if (w < 0.95) pValue = 0.05;
+                else if (w < 0.98) pValue = 0.10;
+                else pValue = 0.50;
+                
+                return {
+                    statistic: w,
+                    pValue: pValue
+                };
+            }
+            
+            function displayNormalityResults(results) {
+                var resultDiv = document.getElementById('normalityResult');
+                var alpha = results.alpha;
+                
+                var html = '<div class="result-card">';
+                html += '<div class="result-header">📈 Résultats des Tests de Normalité</div>';
+                
+                // Statistiques descriptives
+                html += '<h3 style="margin-top: 1.5rem; margin-bottom: 1rem;">Statistiques Descriptives</h3>';
+                html += '<div class="result-stats">';
+                html += '<div class="stat-item"><div class="stat-label">N</div><div class="stat-value">' + results.stats.n + '</div></div>';
+                html += '<div class="stat-item"><div class="stat-label">Moyenne</div><div class="stat-value">' + Utils.formatNumber(results.stats.mean) + '</div></div>';
+                html += '<div class="stat-item"><div class="stat-label">Écart-type</div><div class="stat-value">' + Utils.formatNumber(results.stats.std) + '</div></div>';
+                html += '<div class="stat-item"><div class="stat-label">Médiane</div><div class="stat-value">' + Utils.formatNumber(results.stats.median) + '</div></div>';
+                html += '<div class="stat-item"><div class="stat-label">Min</div><div class="stat-value">' + Utils.formatNumber(results.stats.min) + '</div></div>';
+                html += '<div class="stat-item"><div class="stat-label">Max</div><div class="stat-value">' + Utils.formatNumber(results.stats.max) + '</div></div>';
+                html += '<div class="stat-item"><div class="stat-label">Asymétrie</div><div class="stat-value">' + Utils.formatNumber(results.stats.skewness) + '</div></div>';
+                html += '<div class="stat-item"><div class="stat-label">Aplatissement</div><div class="stat-value">' + Utils.formatNumber(results.stats.kurtosis) + '</div></div>';
+                html += '</div>';
+                
+                // Test de Jarque-Bera
+                html += '<h3 style="margin-top: 1.5rem; margin-bottom: 1rem;">Test de Jarque-Bera</h3>';
+                var jbReject = results.jarqueBera.pValue < alpha;
+                html += '<div class="result-stats">';
+                html += '<div class="stat-item"><div class="stat-label">Statistique JB</div><div class="stat-value">' + Utils.formatNumber(results.jarqueBera.statistic) + '</div></div>';
+                html += '<div class="stat-item"><div class="stat-label">p-value</div><div class="stat-value">' + Utils.formatNumber(results.jarqueBera.pValue) + '</div></div>';
+                html += '</div>';
+                
+                var decisionClass = jbReject ? 'accept' : 'reject';
+                var decisionText = jbReject ? '❌ Normalité rejetée' : '✅ Normalité acceptée';
+                var interpretText = jbReject ?
+                    'Les données ne semblent <strong>pas suivre une distribution normale</strong>.' :
+                    'Les données semblent <strong>suivre une distribution normale</strong>.';
+                
+                html += '<div class="decision-box ' + decisionClass + '">';
+                html += '<div class="decision-title">' + decisionText + '</div>';
+                html += '<p style="margin-top: 0.5rem;">' + interpretText + '</p>';
+                html += '<p style="margin-top: 1rem; font-size: 0.9rem;">';
+                html += 'p-value (' + Utils.formatNumber(results.jarqueBera.pValue) + ') ';
+                html += jbReject ? '<' : '≥';
+                html += ' α (' + alpha.toFixed(2) + ')';
+                html += '</p>';
+                html += '</div>';
+                
+                // Test de Shapiro-Wilk si disponible
+                if (results.shapiroWilk) {
+                    html += '<h3 style="margin-top: 1.5rem; margin-bottom: 1rem;">Test de Shapiro-Wilk</h3>';
+                    var swReject = results.shapiroWilk.pValue < alpha;
+                    html += '<div class="result-stats">';
+                    html += '<div class="stat-item"><div class="stat-label">Statistique W</div><div class="stat-value">' + Utils.formatNumber(results.shapiroWilk.statistic) + '</div></div>';
+                    html += '<div class="stat-item"><div class="stat-label">p-value (approx)</div><div class="stat-value">' + Utils.formatNumber(results.shapiroWilk.pValue) + '</div></div>';
+                    html += '</div>';
+                    
+                    var decisionClass2 = swReject ? 'accept' : 'reject';
+                    var decisionText2 = swReject ? '❌ Normalité rejetée' : '✅ Normalité acceptée';
+                    var interpretText2 = swReject ?
+                        'Les données ne semblent <strong>pas suivre une distribution normale</strong>.' :
+                        'Les données semblent <strong>suivre une distribution normale</strong>.';
+                    
+                    html += '<div class="decision-box ' + decisionClass2 + '">';
+                    html += '<div class="decision-title">' + decisionText2 + '</div>';
+                    html += '<p style="margin-top: 0.5rem;">' + interpretText2 + '</p>';
+                    html += '<p style="margin-top: 1rem; font-size: 0.9rem;">';
+                    html += 'p-value (' + Utils.formatNumber(results.shapiroWilk.pValue) + ') ';
+                    html += swReject ? '<' : '≥';
+                    html += ' α (' + alpha.toFixed(2) + ')';
+                    html += '</p>';
+                    html += '</div>';
+                }
+                
+                html += '</div>';
+                
+                resultDiv.innerHTML = html;
+                resultDiv.classList.remove('hidden');
+            }
+            
+            function drawHistogram(data) {
+                var container = document.getElementById('normalityCanvasContainer');
+                var canvas = document.getElementById('normalityCanvas');
+                var ctx = canvas.getContext('2d');
+                
+                container.classList.remove('hidden');
+                
+                var dpr = window.devicePixelRatio || 1;
+                var rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                ctx.scale(dpr, dpr);
+                
+                var width = rect.width;
+                var height = rect.height;
+                var padding = 60;
+                
+                // Calcul statistiques
+                var n = data.length;
+                var mean = 0;
+                for (var i = 0; i < n; i++) {
+                    mean += data[i];
+                }
+                mean /= n;
+                
+                var variance = 0;
+                for (var i = 0; i < n; i++) {
+                    variance += (data[i] - mean) * (data[i] - mean);
+                }
+                variance /= n;
+                var std = Math.sqrt(variance);
+                
+                var sorted = data.slice().sort(function(a, b) { return a - b; });
+                var min = sorted[0];
+                var max = sorted[n - 1];
+                
+                // Histogramme
+                var nBins = Math.min(20, Math.ceil(Math.sqrt(n)));
+                var binWidth = (max - min) / nBins;
+                var bins = [];
+                for (var i = 0; i < nBins; i++) {
+                    bins[i] = 0;
+                }
+                
+                for (var i = 0; i < n; i++) {
+                    var binIndex = Math.floor((data[i] - min) / binWidth);
+                    if (binIndex >= nBins) binIndex = nBins - 1;
+                    bins[binIndex]++;
+                }
+                
+                var maxBin = Math.max.apply(null, bins);
+                
+                // Fond
+                ctx.fillStyle = '#fafbff';
+                ctx.fillRect(0, 0, width, height);
+                
+                // Dessiner histogramme
+                var barWidth = (width - 2 * padding) / nBins;
+                var scaleY = (height - 2 * padding) / maxBin;
+                
+                ctx.fillStyle = 'rgba(99, 102, 241, 0.6)';
+                ctx.strokeStyle = '#6366f1';
+                ctx.lineWidth = 2;
+                
+                for (var i = 0; i < nBins; i++) {
+                    var x = padding + i * barWidth;
+                    var barHeight = bins[i] * scaleY;
+                    var y = height - padding - barHeight;
+                    ctx.fillRect(x, y, barWidth - 2, barHeight);
+                    ctx.strokeRect(x, y, barWidth - 2, barHeight);
+                }
+                
+                // Courbe normale théorique
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                var first = true;
+                for (var x = min; x <= max; x += (max - min) / 200) {
+                    var z = (x - mean) / std;
+                    var y = (n * binWidth / std) * (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * z * z);
+                    var canvasX = padding + ((x - min) / (max - min)) * (width - 2 * padding);
+                    var canvasY = height - padding - y * scaleY;
+                    
+                    if (first) {
+                        ctx.moveTo(canvasX, canvasY);
+                        first = false;
+                    } else {
+                        ctx.lineTo(canvasX, canvasY);
+                    }
+                }
+                ctx.stroke();
+                
+                // Axes
+                ctx.strokeStyle = '#374151';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(padding, height - padding);
+                ctx.lineTo(width - padding, height - padding);
+                ctx.moveTo(padding, padding);
+                ctx.lineTo(padding, height - padding);
+                ctx.stroke();
+                
+                // Titre
+                ctx.fillStyle = '#1f2937';
+                ctx.font = 'bold 16px system-ui';
+                ctx.textAlign = 'center';
+                ctx.fillText('Histogramme et Distribution Normale Théorique', width / 2, 25);
+                
+                // Légende
+                ctx.textAlign = 'left';
+                ctx.font = '13px system-ui';
+                ctx.fillStyle = 'rgba(99, 102, 241, 0.8)';
+                ctx.fillRect(width - 200, 50, 20, 15);
+                ctx.fillStyle = '#374151';
+                ctx.fillText('Données observées', width - 175, 62);
+                
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(width - 200, 77);
+                ctx.lineTo(width - 180, 77);
+                ctx.stroke();
+                ctx.fillStyle = '#374151';
+                ctx.fillText('Loi normale N(' + Utils.formatNumber(mean, 2) + ', ' + Utils.formatNumber(std, 2) + ')', width - 175, 80);
+            }
+            
+            function displayNormalityError(message) {
+                var resultDiv = document.getElementById('normalityResult');
+                resultDiv.innerHTML = '<div class="result-card" style="border-color: var(--danger); background: rgba(239, 68, 68, 0.05);"><div class="result-header">⚠️ Erreur</div><p style="margin-top: 1rem;">' + message + '</p></div>';
+                resultDiv.classList.remove('hidden');
+            }
+            
+            function resetNormality() {
+                document.getElementById('normalityResult').classList.add('hidden');
+                document.getElementById('normalityCanvasContainer').classList.add('hidden');
+                document.getElementById('dataCount').classList.add('hidden');
+            }
+            
+            // ========== ONGLET 4: INTERVALLES DE CONFIANCE ==========
+            
+            var estimationSelect = document.getElementById('estimationSelect');
+            if (estimationSelect) {
+                estimationSelect.addEventListener('change', function() {
+                    showEstimationParams(this.value);
+                });
+            }
+            
+            function showEstimationParams(estType) {
+                var allParams = document.querySelectorAll('#tab-estimation .law-params');
+                for (var i = 0; i < allParams.length; i++) {
+                    allParams[i].classList.remove('active');
+                }
+                
+                var targetParams = document.getElementById(estType + 'Params');
+                if (targetParams) {
+                    targetParams.classList.add('active');
+                }
+                
+                resetEstimation();
+            }
+            
+            var confidenceLevel = document.getElementById('confidenceLevel');
+            if (confidenceLevel) {
+                confidenceLevel.addEventListener('input', function() {
+                    document.getElementById('confidenceValue').textContent = this.value + '%';
+                });
+            }
+            
+            var btnCalculateEstimation = document.getElementById('btnCalculateEstimation');
+            if (btnCalculateEstimation) {
+                btnCalculateEstimation.addEventListener('click', calculateEstimation);
+            }
+            
+            var btnResetEstimation = document.getElementById('btnResetEstimation');
+            if (btnResetEstimation) {
+                btnResetEstimation.addEventListener('click', resetEstimation);
+            }
+            
+            function calculateEstimation() {
+                var estType = estimationSelect.value;
+                var confidence = parseFloat(document.getElementById('confidenceLevel').value) / 100;
+                var alpha = 1 - confidence;
+                
+                try {
+                    var result;
+                    if (estType === 'mean-known') {
+                        result = estimateMeanKnown(alpha);
+                    } else if (estType === 'mean-unknown') {
+                        result = estimateMeanUnknown(alpha);
+                    } else if (estType === 'variance') {
+                        result = estimateVariance(alpha);
+                    } else if (estType === 'proportion') {
+                        result = estimateProportion(alpha);
+                    } else if (estType === 'diff-means-known') {
+                        result = estimateDiffMeansKnown(alpha);
+                    } else if (estType === 'diff-means-equal') {
+                        result = estimateDiffMeansEqual(alpha);
+                    } else if (estType === 'diff-means-unequal') {
+                        result = estimateDiffMeansUnequal(alpha);
+                    } else if (estType === 'ratio-variances') {
+                        result = estimateRatioVariances(alpha);
+                    } else if (estType === 'diff-proportions') {
+                        result = estimateDiffProportions(alpha);
+                    }
+                    
+                    displayEstimationResult(result, confidence);
+                } catch(error) {
+                    displayEstimationError(error.message);
+                }
+            }
+            
+            function estimateMeanKnown(alpha) {
+                var xbar = parseFloat(document.getElementById('mk-xbar').value);
+                var sigma = parseFloat(document.getElementById('mk-sigma').value);
+                var n = parseInt(document.getElementById('mk-n').value);
+                
+                if (!Utils.isValidNumber(xbar)) throw new Error('x̄ invalide');
+                if (!Utils.isValidNumber(sigma) || sigma <= 0) throw new Error('σ doit être > 0');
+                if (!Utils.isValidNumber(n) || n < 2) throw new Error('n doit être >= 2');
+                
+                var z = normalQuantile(1 - alpha / 2, 0, 1);
+                var margin = z * (sigma / Math.sqrt(n));
+                
+                var warning = null;
+                if (n < 30) {
+                    warning = '⚠️ Petit échantillon (n < 30) : Les résultats sont valides SEULEMENT si la population suit une loi normale.';
+                }
+                
+                return {
+                    name: 'Intervalle de confiance pour μ (variance connue)',
+                    parameter: 'μ',
+                    pointEstimate: xbar,
+                    margin: margin,
+                    lower: xbar - margin,
+                    upper: xbar + margin,
+                    method: 'Loi Normale',
+                    formula: 'x̄ ± z(α/2) × (σ/√n)',
+                    sampleSize: n,
+                    warning: warning
+                };
+            }
+            
+            function estimateMeanUnknown(alpha) {
+                var xbar = parseFloat(document.getElementById('mu-xbar').value);
+                var s = parseFloat(document.getElementById('mu-s').value);
+                var n = parseInt(document.getElementById('mu-n').value);
+                
+                if (!Utils.isValidNumber(xbar)) throw new Error('x̄ invalide');
+                if (!Utils.isValidNumber(s) || s <= 0) throw new Error('s doit être > 0');
+                if (!Utils.isValidNumber(n) || n < 2) throw new Error('n doit être >= 2');
+                
+                var df = n - 1;
+                var t = studentQuantile(1 - alpha / 2, df);
+                var margin = t * (s / Math.sqrt(n));
+                
+                var warning = null;
+                if (n < 30) {
+                    warning = '⚠️ Petit échantillon (n < 30) : Les résultats sont valides SEULEMENT si la population suit une loi normale. Vérifiez la normalité des données.';
+                }
+                
+                return {
+                    name: 'Intervalle de confiance pour μ (variance inconnue)',
+                    parameter: 'μ',
+                    pointEstimate: xbar,
+                    margin: margin,
+                    lower: xbar - margin,
+                    upper: xbar + margin,
+                    method: 'Loi de Student (ddl=' + df + ')',
+                    formula: 'x̄ ± t(α/2, n-1) × (s/√n)',
+                    sampleSize: n,
+                    warning: warning
+                };
+            }
+            
+            function estimateVariance(alpha) {
+                var s2 = parseFloat(document.getElementById('var-s2').value);
+                var n = parseInt(document.getElementById('var-n').value);
+                
+                if (!Utils.isValidNumber(s2) || s2 <= 0) throw new Error('s² doit être > 0');
+                if (!Utils.isValidNumber(n) || n < 2) throw new Error('n doit être >= 2');
+                
+                var df = n - 1;
+                var chiLower = chi2Quantile(alpha / 2, df);
+                var chiUpper = chi2Quantile(1 - alpha / 2, df);
+                
+                var lower = (df * s2) / chiUpper;
+                var upper = (df * s2) / chiLower;
+                
+                return {
+                    name: 'Intervalle de confiance pour σ²',
+                    parameter: 'σ²',
+                    pointEstimate: s2,
+                    lower: lower,
+                    upper: upper,
+                    stdLower: Math.sqrt(lower),
+                    stdUpper: Math.sqrt(upper),
+                    method: 'Loi du Chi-deux (ddl=' + df + ')',
+                    formula: '[(n-1)s²/χ²(1-α/2), (n-1)s²/χ²(α/2)]'
+                };
+            }
+            
+            function estimateProportion(alpha) {
+                var phat = parseFloat(document.getElementById('prop-phat').value);
+                var x, n;
+                
+                if (Utils.isValidNumber(phat)) {
+                    n = parseInt(document.getElementById('prop-n').value);
+                    if (!Utils.isValidNumber(n) || n < 1) throw new Error('n doit être >= 1');
+                    x = Math.round(phat * n);
+                } else {
+                    x = parseInt(document.getElementById('prop-x').value);
+                    n = parseInt(document.getElementById('prop-n').value);
+                    if (!Utils.isValidNumber(x) || x < 0) throw new Error('x invalide');
+                    if (!Utils.isValidNumber(n) || n < 1) throw new Error('n doit être >= 1');
+                    if (x > n) throw new Error('x doit être <= n');
+                    phat = x / n;
+                }
+                
+                if (n * phat < 5 || n * (1 - phat) < 5) {
+                    throw new Error('Conditions non remplies : np̂ >= 5 ET n(1-p̂) >= 5');
+                }
+                
+                var z = normalQuantile(1 - alpha / 2, 0, 1);
+                var margin = z * Math.sqrt((phat * (1 - phat)) / n);
+                
+                return {
+                    name: 'Intervalle de confiance pour p',
+                    parameter: 'p',
+                    pointEstimate: phat,
+                    margin: margin,
+                    lower: Math.max(0, phat - margin),
+                    upper: Math.min(1, phat + margin),
+                    method: 'Approximation normale',
+                    formula: 'p̂ ± z(α/2) × √[p̂(1-p̂)/n]',
+                    sampleSize: n,
+                    successes: x
+                };
+            }
+            
+            function estimateDiffMeansKnown(alpha) {
+                var xbar1 = parseFloat(document.getElementById('dmk-xbar1').value);
+                var sigma1 = parseFloat(document.getElementById('dmk-sigma1').value);
+                var n1 = parseInt(document.getElementById('dmk-n1').value);
+                var xbar2 = parseFloat(document.getElementById('dmk-xbar2').value);
+                var sigma2 = parseFloat(document.getElementById('dmk-sigma2').value);
+                var n2 = parseInt(document.getElementById('dmk-n2').value);
+                
+                if (!Utils.isValidNumber(xbar1)) throw new Error('x̄₁ invalide');
+                if (!Utils.isValidNumber(sigma1) || sigma1 <= 0) throw new Error('σ₁ doit être > 0');
+                if (!Utils.isValidNumber(n1) || n1 < 2) throw new Error('n₁ doit être >= 2');
+                if (!Utils.isValidNumber(xbar2)) throw new Error('x̄₂ invalide');
+                if (!Utils.isValidNumber(sigma2) || sigma2 <= 0) throw new Error('σ₂ doit être > 0');
+                if (!Utils.isValidNumber(n2) || n2 < 2) throw new Error('n₂ doit être >= 2');
+                
+                var diff = xbar1 - xbar2;
+                var z = normalQuantile(1 - alpha / 2, 0, 1);
+                var se = Math.sqrt((sigma1 * sigma1) / n1 + (sigma2 * sigma2) / n2);
+                var margin = z * se;
+                
+                var warning = null;
+                if (n1 < 30 || n2 < 30) {
+                    warning = '⚠️ Au moins un échantillon est petit (n < 30) : Validité sous hypothèse de normalité des deux populations.';
+                }
+                
+                return {
+                    name: 'IC pour μ₁ - μ₂ (variances connues)',
+                    parameter: 'μ₁ - μ₂',
+                    pointEstimate: diff,
+                    margin: margin,
+                    lower: diff - margin,
+                    upper: diff + margin,
+                    method: 'Loi Normale',
+                    formula: '(x̄₁ - x̄₂) ± z(α/2) × √(σ₁²/n₁ + σ₂²/n₂)',
+                    sampleSizes: 'n₁=' + n1 + ', n₂=' + n2,
+                    warning: warning
+                };
+            }
+            
+            function estimateDiffMeansEqual(alpha) {
+                var xbar1 = parseFloat(document.getElementById('dme-xbar1').value);
+                var s1 = parseFloat(document.getElementById('dme-s1').value);
+                var n1 = parseInt(document.getElementById('dme-n1').value);
+                var xbar2 = parseFloat(document.getElementById('dme-xbar2').value);
+                var s2 = parseFloat(document.getElementById('dme-s2').value);
+                var n2 = parseInt(document.getElementById('dme-n2').value);
+                
+                if (!Utils.isValidNumber(xbar1)) throw new Error('x̄₁ invalide');
+                if (!Utils.isValidNumber(s1) || s1 <= 0) throw new Error('s₁ doit être > 0');
+                if (!Utils.isValidNumber(n1) || n1 < 2) throw new Error('n₁ doit être >= 2');
+                if (!Utils.isValidNumber(xbar2)) throw new Error('x̄₂ invalide');
+                if (!Utils.isValidNumber(s2) || s2 <= 0) throw new Error('s₂ doit être > 0');
+                if (!Utils.isValidNumber(n2) || n2 < 2) throw new Error('n₂ doit être >= 2');
+                
+                var diff = xbar1 - xbar2;
+                var df = n1 + n2 - 2;
+                var sp2 = ((n1 - 1) * s1 * s1 + (n2 - 1) * s2 * s2) / df;
+                var t = studentQuantile(1 - alpha / 2, df);
+                var se = Math.sqrt(sp2 * (1 / n1 + 1 / n2));
+                var margin = t * se;
+                
+                var warning = null;
+                if (n1 < 30 || n2 < 30) {
+                    warning = '⚠️ Au moins un échantillon est petit (n < 30) : Validité sous hypothèse de normalité des deux populations ET d\'égalité des variances. Vérifiez ces conditions.';
+                }
+                
+                return {
+                    name: 'IC pour μ₁ - μ₂ (variances égales)',
+                    parameter: 'μ₁ - μ₂',
+                    pointEstimate: diff,
+                    margin: margin,
+                    lower: diff - margin,
+                    upper: diff + margin,
+                    method: 'Loi de Student poolée (ddl=' + df + ')',
+                    formula: '(x̄₁ - x̄₂) ± t(α/2) × s_p × √(1/n₁ + 1/n₂)',
+                    pooledVar: sp2,
+                    sampleSizes: 'n₁=' + n1 + ', n₂=' + n2,
+                    warning: warning
+                };
+            }
+            
+            function estimateDiffMeansUnequal(alpha) {
+                var xbar1 = parseFloat(document.getElementById('dmu-xbar1').value);
+                var s1 = parseFloat(document.getElementById('dmu-s1').value);
+                var n1 = parseInt(document.getElementById('dmu-n1').value);
+                var xbar2 = parseFloat(document.getElementById('dmu-xbar2').value);
+                var s2 = parseFloat(document.getElementById('dmu-s2').value);
+                var n2 = parseInt(document.getElementById('dmu-n2').value);
+                
+                if (!Utils.isValidNumber(xbar1)) throw new Error('x̄₁ invalide');
+                if (!Utils.isValidNumber(s1) || s1 <= 0) throw new Error('s₁ doit être > 0');
+                if (!Utils.isValidNumber(n1) || n1 < 2) throw new Error('n₁ doit être >= 2');
+                if (!Utils.isValidNumber(xbar2)) throw new Error('x̄₂ invalide');
+                if (!Utils.isValidNumber(s2) || s2 <= 0) throw new Error('s₂ doit être > 0');
+                if (!Utils.isValidNumber(n2) || n2 < 2) throw new Error('n₂ doit être >= 2');
+                
+                var diff = xbar1 - xbar2;
+                var v1 = (s1 * s1) / n1;
+                var v2 = (s2 * s2) / n2;
+                var se = Math.sqrt(v1 + v2);
+                
+                // Degrés de liberté de Welch
+                var df = Math.floor((v1 + v2) * (v1 + v2) / (v1 * v1 / (n1 - 1) + v2 * v2 / (n2 - 1)));
+                
+                var t = studentQuantile(1 - alpha / 2, df);
+                var margin = t * se;
+                
+                var warning = null;
+                if (n1 < 30 || n2 < 30) {
+                    warning = '⚠️ Au moins un échantillon est petit (n < 30) : Méthode de Welch robuste mais validité sous hypothèse de normalité des deux populations.';
+                }
+                
+                return {
+                    name: 'IC pour μ₁ - μ₂ (Welch - variances différentes)',
+                    parameter: 'μ₁ - μ₂',
+                    pointEstimate: diff,
+                    margin: margin,
+                    lower: diff - margin,
+                    upper: diff + margin,
+                    method: 'Loi de Student (Welch, ddl≈' + df + ')',
+                    formula: '(x̄₁ - x̄₂) ± t(α/2) × √(s₁²/n₁ + s₂²/n₂)',
+                    sampleSizes: 'n₁=' + n1 + ', n₂=' + n2,
+                    warning: warning
+                };
+            }
+            
+            function estimateRatioVariances(alpha) {
+                var s1 = parseFloat(document.getElementById('rv-s1').value);
+                var n1 = parseInt(document.getElementById('rv-n1').value);
+                var s2 = parseFloat(document.getElementById('rv-s2').value);
+                var n2 = parseInt(document.getElementById('rv-n2').value);
+                
+                if (!Utils.isValidNumber(s1) || s1 <= 0) throw new Error('s₁² doit être > 0');
+                if (!Utils.isValidNumber(n1) || n1 < 2) throw new Error('n₁ doit être >= 2');
+                if (!Utils.isValidNumber(s2) || s2 <= 0) throw new Error('s₂² doit être > 0');
+                if (!Utils.isValidNumber(n2) || n2 < 2) throw new Error('n₂ doit être >= 2');
+                
+                var ratio = s1 / s2;
+                var df1 = n1 - 1;
+                var df2 = n2 - 1;
+                
+                var fLower = fisherQuantile(alpha / 2, df1, df2);
+                var fUpper = fisherQuantile(1 - alpha / 2, df1, df2);
+                
+                return {
+                    name: 'IC pour σ₁²/σ₂²',
+                    parameter: 'σ₁²/σ₂²',
+                    pointEstimate: ratio,
+                    lower: ratio / fUpper,
+                    upper: ratio / fLower,
+                    method: 'Loi de Fisher (ddl₁=' + df1 + ', ddl₂=' + df2 + ')',
+                    formula: '[(s₁²/s₂²)/F(1-α/2), (s₁²/s₂²)/F(α/2)]'
+                };
+            }
+            
+            function estimateDiffProportions(alpha) {
+                var x1 = parseInt(document.getElementById('dp-x1').value);
+                var n1 = parseInt(document.getElementById('dp-n1').value);
+                var x2 = parseInt(document.getElementById('dp-x2').value);
+                var n2 = parseInt(document.getElementById('dp-n2').value);
+                
+                if (!Utils.isValidNumber(x1) || x1 < 0) throw new Error('x₁ invalide');
+                if (!Utils.isValidNumber(n1) || n1 < 1) throw new Error('n₁ doit être >= 1');
+                if (x1 > n1) throw new Error('x₁ doit être <= n₁');
+                if (!Utils.isValidNumber(x2) || x2 < 0) throw new Error('x₂ invalide');
+                if (!Utils.isValidNumber(n2) || n2 < 1) throw new Error('n₂ doit être >= 1');
+                if (x2 > n2) throw new Error('x₂ doit être <= n₂');
+                
+                var p1 = x1 / n1;
+                var p2 = x2 / n2;
+                var diff = p1 - p2;
+                
+                if (n1 * p1 < 5 || n1 * (1 - p1) < 5 || n2 * p2 < 5 || n2 * (1 - p2) < 5) {
+                    throw new Error('Conditions non remplies pour tous les échantillons');
+                }
+                
+                var z = normalQuantile(1 - alpha / 2, 0, 1);
+                var se = Math.sqrt((p1 * (1 - p1)) / n1 + (p2 * (1 - p2)) / n2);
+                var margin = z * se;
+                
+                return {
+                    name: 'IC pour p₁ - p₂',
+                    parameter: 'p₁ - p₂',
+                    pointEstimate: diff,
+                    margin: margin,
+                    lower: diff - margin,
+                    upper: diff + margin,
+                    method: 'Approximation normale',
+                    formula: '(p̂₁ - p̂₂) ± z(α/2) × √[p̂₁(1-p̂₁)/n₁ + p̂₂(1-p̂₂)/n₂]',
+                    p1: p1,
+                    p2: p2
+                };
+            }
+            
+            function displayEstimationResult(result, confidence) {
+                var resultDiv = document.getElementById('estimationResult');
+                var html = '<div class="result-card">';
+                
+                html += '<div class="result-header">📊 ' + result.name + '</div>';
+                
+                // Avertissement si petit échantillon
+                if (result.warning) {
+                    html += '<div style="margin: 1.5rem 0; padding: 1rem; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 8px;">';
+                    html += '<strong style="color: #856404;">' + result.warning + '</strong>';
+                    html += '</div>';
+                }
+                
+                // Taille(s) d'échantillon
+                if (result.sampleSize !== undefined) {
+                    html += '<div style="margin: 1rem 0; padding: 0.75rem; background: #e3f2fd; border-radius: 8px;">';
+                    html += '<strong>Taille d\'échantillon :</strong> n = ' + result.sampleSize;
+                    if (result.sampleSize < 30) {
+                        html += ' <span style="color: #d32f2f;">(petit échantillon)</span>';
+                    } else {
+                        html += ' <span style="color: #388e3c;">(grand échantillon - TCL applicable)</span>';
+                    }
+                    html += '</div>';
+                }
+                
+                if (result.sampleSizes !== undefined) {
+                    html += '<div style="margin: 1rem 0; padding: 0.75rem; background: #e3f2fd; border-radius: 8px;">';
+                    html += '<strong>Tailles d\'échantillons :</strong> ' + result.sampleSizes;
+                    html += '</div>';
+                }
+                
+                // Estimation ponctuelle
+                html += '<div style="margin: 1.5rem 0; padding: 1rem; background: white; border-radius: 8px;">';
+                html += '<strong>Estimation ponctuelle de ' + result.parameter + ':</strong> ';
+                html += Utils.formatNumber(result.pointEstimate);
+                html += '</div>';
+                
+                // Intervalle de confiance
+                html += '<div class="decision-box reject" style="margin-top: 1.5rem;">';
+                html += '<div class="decision-title">✅ Intervalle de confiance à ' + (confidence * 100).toFixed(0) + '%</div>';
+                html += '<p style="margin-top: 1rem; font-size: 1.2rem; font-weight: 600;">';
+                html += '[' + Utils.formatNumber(result.lower, 4) + ' ; ' + Utils.formatNumber(result.upper, 4) + ']';
+                html += '</p>';
+                
+                if (result.margin !== undefined) {
+                    html += '<p style="margin-top: 1rem; font-size: 0.9rem;">';
+                    html += 'Marge d\'erreur : ± ' + Utils.formatNumber(result.margin, 4);
+                    html += '</p>';
+                }
+                
+                // Informations supplémentaires pour variance
+                if (result.stdLower !== undefined) {
+                    html += '<p style="margin-top: 1rem; font-size: 0.95rem;">';
+                    html += '<strong>IC pour σ :</strong> [' + Utils.formatNumber(result.stdLower, 4) + ' ; ' + Utils.formatNumber(result.stdUpper, 4) + ']';
+                    html += '</p>';
+                }
+                
+                // Informations pour proportions
+                if (result.successes !== undefined) {
+                    html += '<p style="margin-top: 1rem; font-size: 0.9rem;">';
+                    html += 'p̂ = ' + result.successes + '/' + result.sampleSize + ' = ' + Utils.formatNumber(result.pointEstimate, 4);
+                    html += '</p>';
+                }
+                
+                if (result.p1 !== undefined) {
+                    html += '<p style="margin-top: 1rem; font-size: 0.9rem;">';
+                    html += 'p̂₁ = ' + Utils.formatNumber(result.p1, 4) + ', p̂₂ = ' + Utils.formatNumber(result.p2, 4);
+                    html += '</p>';
+                }
+                
+                if (result.pooledVar !== undefined) {
+                    html += '<p style="margin-top: 1rem; font-size: 0.9rem;">';
+                    html += 'Variance poolée s_p² = ' + Utils.formatNumber(result.pooledVar, 4);
+                    html += '</p>';
+                }
+                
+                html += '</div>';
+                
+                // Méthode et formule
+                html += '<div style="margin-top: 1.5rem; padding: 1rem; background: #f0f4ff; border-radius: 8px; border-left: 4px solid var(--primary);">';
+                html += '<p style="margin-bottom: 0.5rem;"><strong>Méthode :</strong> ' + result.method + '</p>';
+                html += '<p style="font-family: monospace; font-size: 0.9rem;"><strong>Formule :</strong> ' + result.formula + '</p>';
+                html += '</div>';
+                
+                html += '</div>';
+                
+                resultDiv.innerHTML = html;
+                resultDiv.classList.remove('hidden');
+            }
+            
+            function displayEstimationError(message) {
+                var resultDiv = document.getElementById('estimationResult');
+                resultDiv.innerHTML = '<div class="result-card" style="border-color: var(--danger); background: rgba(239, 68, 68, 0.05);"><div class="result-header">⚠️ Erreur</div><p style="margin-top: 1rem;">' + message + '</p></div>';
+                resultDiv.classList.remove('hidden');
+            }
+            
+            function resetEstimation() {
+                document.getElementById('estimationResult').classList.add('hidden');
+            }
+            
+            console.log('StatBox v3.0 - Application complète chargée !');
+        });
+    </script>
+</body>
+</html>
