@@ -1,0 +1,2356 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StatBox - Calculs Statistiques Hors-Ligne</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #22c55e;
+            --success-bg: #dcfce7;
+            --error: #ef4444;
+            --error-bg: #fee2e2;
+            --background: #ffffff;
+            --surface: #f8fafc;
+            --text: #0f172a;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+        }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: var(--surface);
+            color: var(--text);
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.25rem; }
+        .header p { font-size: 0.875rem; opacity: 0.9; }
+        .main-content {
+            flex: 1;
+            padding: 1rem;
+            max-width: 600px;
+            margin: 0 auto;
+            width: 100%;
+            padding-bottom: 80px;
+        }
+        .tab { display: none; animation: fadeIn 0.2s ease-in-out; }
+        .tab.active { display: block; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .card {
+            background: var(--background);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--border);
+        }
+        .card h2 { font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: var(--text); }
+        .card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; margin-top: 1rem; color: var(--text); }
+        .form-group { margin-bottom: 1rem; }
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+        input[type="number"], input[type="text"], select, textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.15s ease;
+            background: var(--background);
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .radio-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .radio-option:hover { background: var(--surface); }
+        .radio-option.selected { border-color: var(--primary); background: var(--surface); }
+        .radio-option input[type="radio"] { width: auto; cursor: pointer; }
+        .alpha-buttons { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+        .alpha-btn {
+            flex: 1;
+            padding: 0.5rem;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            background: var(--background);
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-weight: 500;
+        }
+        .alpha-btn:hover { border-color: var(--primary); }
+        .alpha-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-danger { background: var(--error); color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-secondary { background: #64748b; color: white; }
+        .btn-secondary:hover { background: #475569; }
+        .btn-full { width: 100%; }
+        .result-box {
+            background: var(--surface);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            display: none;
+        }
+        .result-box.visible { display: block; }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .result-item:last-child { border-bottom: none; }
+        .result-label { color: var(--text-secondary); font-size: 0.875rem; }
+        .result-value { font-weight: 600; font-size: 0.875rem; }
+        .decision-card {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            text-align: center;
+            border: 2px solid;
+            display: none;
+        }
+        .decision-card.visible { display: block; }
+        .decision-card.rejected {
+            background: var(--error-bg);
+            border-color: var(--error);
+            color: #991b1b;
+        }
+        .decision-card.not-rejected {
+            background: var(--success-bg);
+            border-color: var(--success);
+            color: #166534;
+        }
+        .decision-card .icon { font-size: 2rem; margin-bottom: 0.5rem; display: block; }
+        .decision-card .title { font-weight: 700; font-size: 1rem; margin-bottom: 0.25rem; }
+        .decision-card .subtitle { font-size: 0.875rem; opacity: 0.8; }
+        .conclusion {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: var(--surface);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            border-left: 3px solid var(--primary);
+            display: none;
+        }
+        .conclusion.visible { display: block; }
+        .chart-container {
+            background: var(--background);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            border: 1px solid var(--border);
+            display: none;
+        }
+        .chart-container.visible { display: block; }
+        .chart-container canvas, .chart-container svg {
+            width: 100%;
+            height: auto;
+            max-height: 300px;
+            display: block;
+        }
+        .button-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.875rem;
+        }
+        .info-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-top: 1rem;
+            display: none;
+        }
+        .info-stats.visible { display: grid; }
+        .info-stat {
+            background: var(--surface);
+            padding: 0.75rem;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .info-stat .label { font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem; }
+        .info-stat .value { font-weight: 600; font-size: 1rem; color: var(--primary); }
+        .test-result {
+            background: var(--surface);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 0.75rem;
+            border-left: 4px solid var(--primary);
+            display: none;
+        }
+        .test-result.visible { display: block; }
+        .test-result.success { border-left-color: var(--success); }
+        .test-result.error { border-left-color: var(--error); }
+        .test-result .stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.25rem 0;
+            font-size: 0.875rem;
+        }
+        .test-result .stat-label { color: var(--text-secondary); }
+        .test-result .stat-value { font-weight: 600; }
+        .nav-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid var(--border);
+            display: flex;
+            height: 60px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+            z-index: 1000;
+        }
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border: none;
+            background: none;
+            font-size: 0.75rem;
+        }
+        .nav-item:hover { background: var(--surface); }
+        .nav-item.active { color: var(--primary); background: #eff6ff; }
+        .nav-item .icon { font-size: 1.5rem; }
+        .nav-item .label { font-weight: 500; }
+        .formula {
+            background: var(--surface);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+            font-family: 'Times New Roman', serif;
+            font-size: 1.1rem;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        .credits-section { margin-top: 1rem; padding: 1rem; background: var(--surface); border-radius: 8px; }
+        .credits-section h4 { font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text); }
+        .credits-section p { font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.25rem; }
+        .credits-section ul { list-style: none; padding: 0; }
+        .credits-section li {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            padding: 0.25rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+        .credits-section li::before {
+            content: "•";
+            position: absolute;
+            left: 0.5rem;
+            color: var(--primary);
+        }
+        .error-message {
+            background: var(--error-bg);
+            color: #991b1b;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            border-left: 3px solid var(--error);
+        }
+        @media (min-width: 601px) {
+            .main-content { padding: 2rem 1rem; }
+            .info-stats.visible { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 600px) {
+            .header h1 { font-size: 1.25rem; }
+            .header p { font-size: 0.75rem; }
+            .card { padding: 1rem; }
+            .info-stats.visible { grid-template-columns: 1fr; }
+            .nav-item .icon { font-size: 1.25rem; }
+            .nav-item .label { font-size: 0.7rem; }
+        }
+        .result-display {
+            background: var(--primary);
+            color: white;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            margin-top: 1rem;
+            display: none;
+        }
+        .result-display.visible { display: block; }
+        .result-label {
+            font-size: 0.875rem;
+            opacity: 0.9;
+            margin-bottom: 0.5rem;
+        }
+        .result-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        .result-description {
+            font-size: 0.875rem;
+            opacity: 0.8;
+            margin-top: 0.5rem;
+        }
+        .help-text {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>📊 StatBox</h1>
+        <p>Calculs Statistiques Hors-Ligne</p>
+    </header>
+
+    <main class="main-content">
+        <div id="tab-lois" class="tab">
+            <div class="card">
+                <h2>📊 Tests d'Hypothèses</h2>
+                <div class="form-group">
+                    <label for="law-select">Choisir une loi :</label>
+                    <select id="law-select">
+                        <option value="normal">Loi Normale (Z)</option>
+                        <option value="student">Loi de Student (t)</option>
+                        <option value="chi2">Loi du Chi-2 (χ²)</option>
+                        <option value="fisher">Loi de Fisher (F)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="law-normal" class="card law-content">
+                <h2>🔔 Loi Normale (Z)</h2>
+                <div class="form-group">
+                    <label>Seuil de signification (α) :</label>
+                    <div class="alpha-buttons">
+                        <button class="alpha-btn" data-alpha="0.01">0.01</button>
+                        <button class="alpha-btn active" data-alpha="0.05">0.05</button>
+                        <button class="alpha-btn" data-alpha="0.10">0.10</button>
+                    </div>
+                    <input type="number" id="normal-alpha" value="0.05" min="0.001" max="0.5" step="0.001">
+                </div>
+                <div class="form-group">
+                    <label>Type de test :</label>
+                    <div class="radio-group">
+                        <label class="radio-option selected" data-test="left">
+                            <input type="radio" name="normal-test" value="left" checked>
+                            <span>Unilatéral à gauche (H1: μ &lt; μ₀)</span>
+                        </label>
+                        <label class="radio-option" data-test="right">
+                            <input type="radio" name="normal-test" value="right">
+                            <span>Unilatéral à droite (H1: μ &gt; μ₀)</span>
+                        </label>
+                        <label class="radio-option" data-test="two">
+                            <input type="radio" name="normal-test" value="two">
+                            <span>Bilatéral (H1: μ ≠ μ₀)</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Mode :</label>
+                    <div class="radio-group">
+                        <label class="radio-option selected" data-mode="x">
+                            <input type="radio" name="normal-mode" value="x" checked>
+                            <span>Entrer x</span>
+                        </label>
+                        <label class="radio-option" data-mode="p">
+                            <input type="radio" name="normal-mode" value="p">
+                            <span>Entrer p</span>
+                        </label>
+                    </div>
+                </div>
+                <div id="normal-x-input" class="form-group">
+                    <label for="normal-x">Valeur x :</label>
+                    <input type="number" id="normal-x" step="0.001" value="1.96" placeholder="Entrez la valeur x">
+                </div>
+                <div id="normal-p-input" class="form-group" style="display: none;">
+                    <label for="normal-p-input-val">Probabilité p :</label>
+                    <input type="number" id="normal-p-input-val" step="0.0001" min="0.0001" max="0.9999" placeholder="Entrez la probabilité p (0 < p < 1)">
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-primary btn-full" id="normal-calculate">🧮 Calculer</button>
+                    <button class="btn btn-secondary btn-full" id="normal-reset" style="min-width: 80px;">🔄</button>
+                </div>
+                <div class="result-box" id="normal-results">
+                    <div class="result-item">
+                        <span class="result-label">P-value calculée</span>
+                        <span class="result-value" id="normal-pvalue">-</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Valeur critique</span>
+                        <span class="result-value" id="normal-critical">-</span>
+                    </div>
+                </div>
+                <div class="decision-card" id="normal-decision">
+                    <span class="icon" id="normal-decision-icon">✅</span>
+                    <div class="title" id="normal-decision-title">H0 NON REJETÉE</div>
+                    <div class="subtitle" id="normal-decision-subtitle"></div>
+                </div>
+                <div class="conclusion" id="normal-conclusion"></div>
+                <div class="chart-container" id="normal-chart-container">
+                    <svg id="normal-chart" viewBox="0 0 400 200"></svg>
+                </div>
+            </div>
+
+            <div id="law-student" class="card law-content" style="display: none;">
+                <h2>📐 Loi de Student (t)</h2>
+                <div class="form-group">
+                    <label for="student-ddl">Degrés de liberté (ddl) :</label>
+                    <input type="number" id="student-ddl" min="1" step="1" value="10">
+                </div>
+                <div class="form-group">
+                    <label>Seuil de signification (α) :</label>
+                    <div class="alpha-buttons">
+                        <button class="alpha-btn" data-alpha="0.01">0.01</button>
+                        <button class="alpha-btn active" data-alpha="0.05">0.05</button>
+                        <button class="alpha-btn" data-alpha="0.10">0.10</button>
+                    </div>
+                    <input type="number" id="student-alpha" value="0.05" min="0.001" max="0.5" step="0.001">
+                </div>
+                <div class="form-group">
+                    <label>Type de test :</label>
+                    <div class="radio-group">
+                        <label class="radio-option selected" data-test="left">
+                            <input type="radio" name="student-test" value="left" checked>
+                            <span>Unilatéral à gauche (H1: μ &lt; μ₀)</span>
+                        </label>
+                        <label class="radio-option" data-test="right">
+                            <input type="radio" name="student-test" value="right">
+                            <span>Unilatéral à droite (H1: μ &gt; μ₀)</span>
+                        </label>
+                        <label class="radio-option" data-test="two">
+                            <input type="radio" name="student-test" value="two">
+                            <span>Bilatéral (H1: μ ≠ μ₀)</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Mode :</label>
+                    <div class="radio-group">
+                        <label class="radio-option selected" data-mode="t">
+                            <input type="radio" name="student-mode" value="t" checked>
+                            <span>Entrer t</span>
+                        </label>
+                        <label class="radio-option" data-mode="p">
+                            <input type="radio" name="student-mode" value="p">
+                            <span>Entrer p</span>
+                        </label>
+                    </div>
+                </div>
+                <div id="student-t-input" class="form-group">
+                    <label for="student-t">Valeur t :</label>
+                    <input type="number" id="student-t" step="0.001" value="2.228">
+                </div>
+                <div id="student-p-input" class="form-group" style="display: none;">
+                    <label for="student-p-input-val">Probabilité p :</label>
+                    <input type="number" id="student-p-input-val" step="0.0001" min="0.0001" max="0.9999">
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-primary btn-full" id="student-calculate">🧮 Calculer</button>
+                    <button class="btn btn-secondary btn-full" id="student-reset" style="min-width: 80px;">🔄</button>
+                </div>
+                <div class="result-box" id="student-results">
+                    <div class="result-item">
+                        <span class="result-label">P-value calculée</span>
+                        <span class="result-value" id="student-pvalue">-</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Valeur critique tα</span>
+                        <span class="result-value" id="student-critical">-</span>
+                    </div>
+                </div>
+                <div class="decision-card" id="student-decision"></div>
+                <div class="conclusion" id="student-conclusion"></div>
+                <div class="chart-container" id="student-chart-container">
+                    <svg id="student-chart" viewBox="0 0 400 200"></svg>
+                </div>
+            </div>
+
+            <div id="law-chi2" class="card law-content" style="display: none;">
+                <h2>χ² Loi du Chi-2</h2>
+                <div class="form-group">
+                    <label for="chi2-ddl">Degrés de liberté (ddl) :</label>
+                    <input type="number" id="chi2-ddl" min="1" step="1" value="5">
+                </div>
+                <div class="form-group">
+                    <label>Seuil de signification (α) :</label>
+                    <div class="alpha-buttons">
+                        <button class="alpha-btn" data-alpha="0.01">0.01</button>
+                        <button class="alpha-btn active" data-alpha="0.05">0.05</button>
+                        <button class="alpha-btn" data-alpha="0.10">0.10</button>
+                    </div>
+                    <input type="number" id="chi2-alpha" value="0.05" min="0.001" max="0.5" step="0.001">
+                </div>
+                <div class="form-group">
+                    <label>Type de test :</label>
+                    <div class="radio-group">
+                        <label class="radio-option" data-test="left">
+                            <input type="radio" name="chi2-test" value="left">
+                            <span>Unilatéral à gauche (rare)</span>
+                        </label>
+                        <label class="radio-option selected" data-test="right">
+                            <input type="radio" name="chi2-test" value="right" checked>
+                            <span>Unilatéral à droite (H1: σ² &gt; σ₀²)</span>
+                        </label>
+                        <label class="radio-option" data-test="two">
+                            <input type="radio" name="chi2-test" value="two">
+                            <span>Bilatéral (H1: σ² ≠ σ₀²)</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Mode :</label>
+                    <div class="radio-group">
+                        <label class="radio-option selected" data-mode="chi2">
+                            <input type="radio" name="chi2-mode" value="chi2" checked>
+                            <span>Entrer χ²</span>
+                        </label>
+                        <label class="radio-option" data-mode="p">
+                            <input type="radio" name="chi2-mode" value="p">
+                            <span>Entrer p</span>
+                        </label>
+                    </div>
+                </div>
+                <div id="chi2-chi2-input" class="form-group">
+                    <label for="chi2-val">Valeur χ² :</label>
+                    <input type="number" id="chi2-val" min="0" step="0.001" value="11.07">
+                </div>
+                <div id="chi2-p-input" class="form-group" style="display: none;">
+                    <label for="chi2-p-input-val">Probabilité p :</label>
+                    <input type="number" id="chi2-p-input-val" step="0.0001" min="0.0001" max="0.9999">
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-primary btn-full" id="chi2-calculate">🧮 Calculer</button>
+                    <button class="btn btn-secondary btn-full" id="chi2-reset" style="min-width: 80px;">🔄</button>
+                </div>
+                <div class="result-box" id="chi2-results">
+                    <div class="result-item">
+                        <span class="result-label">P-value calculée</span>
+                        <span class="result-value" id="chi2-pvalue">-</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Valeur critique χ²α</span>
+                        <span class="result-value" id="chi2-critical">-</span>
+                    </div>
+                </div>
+                <div class="decision-card" id="chi2-decision"></div>
+                <div class="conclusion" id="chi2-conclusion"></div>
+                <div class="chart-container" id="chi2-chart-container">
+                    <svg id="chi2-chart" viewBox="0 0 400 200"></svg>
+                </div>
+            </div>
+
+            <div id="law-fisher" class="card law-content" style="display: none;">
+                <h2>F Loi de Fisher (F)</h2>
+                <div class="form-group">
+                    <label for="fisher-ddl1">ddl1 (numérateur) :</label>
+                    <input type="number" id="fisher-ddl1" min="1" step="1" value="5">
+                </div>
+                <div class="form-group">
+                    <label for="fisher-ddl2">ddl2 (dénominateur) :</label>
+                    <input type="number" id="fisher-ddl2" min="1" step="1" value="10">
+                </div>
+                <div class="form-group">
+                    <label>Seuil de signification (α) :</label>
+                    <div class="alpha-buttons">
+                        <button class="alpha-btn" data-alpha="0.01">0.01</button>
+                        <button class="alpha-btn active" data-alpha="0.05">0.05</button>
+                        <button class="alpha-btn" data-alpha="0.10">0.10</button>
+                    </div>
+                    <input type="number" id="fisher-alpha" value="0.05" min="0.001" max="0.5" step="0.001">
+                </div>
+                <div class="form-group">
+                    <label>Type de test :</label>
+                    <div class="radio-group">
+                        <label class="radio-option" data-test="left">
+                            <input type="radio" name="fisher-test" value="left">
+                            <span>Unilatéral à gauche (rare)</span>
+                        </label>
+                        <label class="radio-option selected" data-test="right">
+                            <input type="radio" name="fisher-test" value="right" checked>
+                            <span>Unilatéral à droite (H1: σ₁² &gt; σ₂²)</span>
+                        </label>
+                        <label class="radio-option" data-test="two">
+                            <input type="radio" name="fisher-test" value="two">
+                            <span>Bilatéral (H1: σ₁² ≠ σ₂²)</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Mode :</label>
+                    <div class="radio-group">
+                        <label class="radio-option selected" data-mode="f">
+                            <input type="radio" name="fisher-mode" value="f" checked>
+                            <span>Entrer F</span>
+                        </label>
+                        <label class="radio-option" data-mode="p">
+                            <input type="radio" name="fisher-mode" value="p">
+                            <span>Entrer p</span>
+                        </label>
+                    </div>
+                </div>
+                <div id="fisher-f-input" class="form-group">
+                    <label for="fisher-val">Valeur F :</label>
+                    <input type="number" id="fisher-val" min="0" step="0.001" value="3.33">
+                </div>
+                <div id="fisher-p-input" class="form-group" style="display: none;">
+                    <label for="fisher-p-input-val">Probabilité p :</label>
+                    <input type="number" id="fisher-p-input-val" step="0.0001" min="0.0001" max="0.9999">
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-primary btn-full" id="fisher-calculate">🧮 Calculer</button>
+                    <button class="btn btn-secondary btn-full" id="fisher-reset" style="min-width: 80px;">🔄</button>
+                </div>
+                <div class="result-box" id="fisher-results">
+                    <div class="result-item">
+                        <span class="result-label">P-value calculée</span>
+                        <span class="result-value" id="fisher-pvalue">-</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Valeur critique Fα</span>
+                        <span class="result-value" id="fisher-critical">-</span>
+                    </div>
+                </div>
+                <div class="decision-card" id="fisher-decision"></div>
+                <div class="conclusion" id="fisher-conclusion"></div>
+                <div class="chart-container" id="fisher-chart-container">
+                    <svg id="fisher-chart" viewBox="0 0 400 200"></svg>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-normality" class="tab">
+            <div class="card">
+                <h2>🔬 Tests de Normalité</h2>
+                <div class="form-group">
+                    <label for="data-input">Entrez vos données :</label>
+                    <textarea id="data-input" placeholder="Exemple: 12.5, 14.2, 13.8, 15.1, 14.9...&#10;Séparateurs acceptés: virgules, espaces, sauts de ligne"></textarea>
+                </div>
+                <button class="btn btn-primary btn-full" id="calculate-normality">🧮 Calculer les Tests</button>
+                <button class="btn btn-danger btn-full" id="clear-data" style="margin-top: 0.5rem;">🗑️ Effacer</button>
+                <div class="info-stats" id="info-stats">
+                    <div class="info-stat">
+                        <div class="label">n</div>
+                        <div class="value" id="stat-n">-</div>
+                    </div>
+                    <div class="info-stat">
+                        <div class="label">Moyenne</div>
+                        <div class="value" id="stat-mean">-</div>
+                    </div>
+                    <div class="info-stat">
+                        <div class="label">Écart-type</div>
+                        <div class="value" id="stat-std">-</div>
+                    </div>
+                </div>
+                <div id="error-container"></div>
+                <div id="test-results">
+                    <h3>Test de Shapiro-Wilk</h3>
+                    <div class="test-result" id="shapiro-result">
+                        <div class="stat">
+                            <span class="stat-label">Statistique W</span>
+                            <span class="stat-value" id="shapiro-w">-</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">P-value</span>
+                            <span class="stat-value" id="shapiro-p">-</span>
+                        </div>
+                    </div>
+
+                    <h3>Test de Jarque-Bera</h3>
+                    <div class="test-result" id="jarque-result">
+                        <div class="stat">
+                            <span class="stat-label">Skewness (Asymétrie)</span>
+                            <span class="stat-value" id="jarque-skew">-</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Kurtosis (Aplatissement)</span>
+                            <span class="stat-value" id="jarque-kurt">-</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Excès de Kurtosis</span>
+                            <span class="stat-value" id="jarque-excess">-</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Statistique JB</span>
+                            <span class="stat-value" id="jarque-jb">-</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">P-value</span>
+                            <span class="stat-value" id="jarque-p">-</span>
+                        </div>
+                    </div>
+
+                    <h3>Histogramme</h3>
+                    <div class="chart-container" id="histogram-container">
+                        <canvas id="histogram"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-tables" class="tab active">
+            <div class="card">
+                <h2>1. Choisir la loi</h2>
+                <div class="form-group">
+                    <label for="tables-law-select">Choisir une loi :</label>
+                    <select id="tables-law-select">
+                        <option value="normal">Loi Normale (Z)</option>
+                        <option value="student">Loi de Student (t)</option>
+                        <option value="chi2">Loi du Chi-2 (χ²)</option>
+                        <option value="fisher">Loi de Fisher (F)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>2. Ce que vous cherchez</h2>
+                <div class="radio-group">
+                    <label class="radio-option selected" data-type="critical">
+                        <input type="radio" name="tables-query-type" value="critical" checked>
+                        <span><strong>Valeur critique</strong> (quantile) à partir de α</span>
+                    </label>
+                    <label class="radio-option" data-type="pvalue">
+                        <input type="radio" name="tables-query-type" value="pvalue">
+                        <span><strong>P-value</strong> (probabilité) à partir d'une valeur</span>
+                    </label>
+                </div>
+                <p class="help-text" id="tables-query-help">Entrez α et les degrés de liberté. La table vous donne la valeur critique telle que P(X > valeur) = α.</p>
+            </div>
+
+            <div class="card">
+                <h2>3. Paramètres</h2>
+                <div id="tables-params-container"></div>
+            </div>
+
+            <button class="btn btn-primary btn-full" id="tables-calculate-btn">📖 Consulter la table</button>
+
+            <div class="result-display" id="tables-result-display">
+                <div class="result-label" id="tables-result-label"></div>
+                <div class="result-value" id="tables-result-value"></div>
+                <div class="result-description" id="tables-result-description"></div>
+            </div>
+        </div>
+
+        <div id="tab-about" class="tab">
+            <div class="card">
+                <h2>ℹ️ À Propos</h2>
+                <div style="text-align: center; margin-bottom: 1rem;">
+                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">📊</div>
+                    <h3 style="margin-top: 0;">StatBox v1.0</h3>
+                    <p style="color: var(--text-secondary);">Application de statistiques portables hors-ligne</p>
+                </div>
+                <h3>📚 Formules Utilisées</h3>
+                <h4>Loi Normale (Z)</h4>
+                <div class="formula">P(X &lt; x) = Φ((x-μ)/σ)</div>
+                <div class="formula">z = Φ⁻¹(p)</div>
+                <h4>Loi de Student (t)</h4>
+                <div class="formula">P(T &lt; t) = CDF(t, ddl)</div>
+                <div class="formula">tα = CDF⁻¹(α, ddl)</div>
+                <h4>Loi du Chi-2 (χ²)</h4>
+                <div class="formula">P(χ² &gt; x) = 1 - CDF(x, ddl)</div>
+                <h4>Loi de Fisher (F)</h4>
+                <div class="formula">P(F &gt; x) = 1 - CDF(x, ddl1, ddl2)</div>
+                <h4>Tests d'Hypothèse</h4>
+                <div class="formula">Si p-value ≤ α → Rejet de H₀</div>
+                <div class="formula">Si p-value &gt; α → Non rejet de H₀</div>
+                <h4>Test de Shapiro-Wilk</h4>
+                <div class="formula">W = (Σaᵢ × x_(i))² / Σ(xᵢ - x̄)²</div>
+                <h4>Test de Jarque-Bera</h4>
+                <div class="formula">JB = n/6 × (g₁² + g₂²/4)</div>
+                <div class="formula">g₁ = Skewness, g₂ = Excès de Kurtosis</div>
+                <div class="credits-section">
+                    <h4>🛠️ Crédits</h4>
+                    <p>Développé pour l'enseignement des statistiques</p>
+                    <h4>Bibliothèques incluses :</h4>
+                    <ul>
+                        <li>jStat (calculs statistiques)</li>
+                        <li>Approximation de Royston (Shapiro-Wilk)</li>
+                    </ul>
+                    <h4>Technologies :</h4>
+                    <ul>
+                        <li>JavaScript Vanilla (ES6+)</li>
+                        <li>HTML5 Canvas / SVG</li>
+                        <li>CSS3 (Flexbox, Grid)</li>
+                    </ul>
+                    <p style="margin-top: 1rem; font-style: italic;">Aucune connexion internet requise pour le fonctionnement.</p>
+                </div>
+                <div class="credits-section">
+                    <h4>📄 Licence</h4>
+                    <p>Usage éducatif et libre</p>
+                    <p>Distribution autorisée</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <nav class="nav-bar">
+        <button class="nav-item active" data-tab="tables">
+            <span class="icon">📚</span>
+            <span class="label">Tables</span>
+        </button>
+        <button class="nav-item" data-tab="lois">
+            <span class="icon">📊</span>
+            <span class="label">Tests</span>
+        </button>
+        <button class="nav-item" data-tab="normality">
+            <span class="icon">🔬</span>
+            <span class="label">Normalité</span>
+        </button>
+        <button class="nav-item" data-tab="about">
+            <span class="icon">ℹ️</span>
+            <span class="label">À Propos</span>
+        </button>
+    </nav>
+
+    <script>
+    // ============================================
+    // jStat Library (Complete Implementation)
+    // ============================================
+    var jStat = (function() {
+        var jStat = {};
+
+        // Factorial
+        jStat.factorialfn = function(n) {
+            var prod = 1;
+            for (var i = 2; i <= n; i++) prod *= i;
+            return prod;
+        };
+
+        // Log Gamma
+        jStat.loggamma = function(z) {
+            var c = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
+            var x = z, y = z, tmp = x + 5.5;
+            tmp -= (x + 0.5) * Math.log(tmp);
+            var ser = 1.000000000190015;
+            for (var j = 0; j < 6; j++) ser += c[j] / ++y;
+            return -tmp + Math.log(2.5066282746310005 * ser / x);
+        };
+
+        // Gamma Function
+        jStat.gammafn = function(x) {
+            if (x <= 0) return NaN;
+            if (x === 1) return 1;
+            if (x === 2) return 1;
+
+            // Lanczos approximation
+            var p = [
+                0.99999999999980993,
+                676.5203681218851,
+                -1259.1392167224028,
+                771.32342877765313,
+                -176.61502916214059,
+                12.507343278686905,
+                -0.13857109526572012,
+                9.9843695780195716e-6,
+                1.5056327351493116e-7
+            ];
+
+            var g = 7;
+            if (x < 0.5) {
+                return Math.PI / (Math.sin(Math.PI * x) * jStat.gammafn(1 - x));
+            }
+
+            x -= 1;
+            var a = p[0];
+            for (var i = 1; i < g + 2; i++) {
+                a += p[i] / (x + i);
+            }
+            var t = x + g + 0.5;
+            var result = Math.sqrt(2 * Math.PI) * Math.pow(t, x + 0.5) * Math.exp(-t) * a;
+            return result;
+        };
+
+        // Beta Function
+        jStat.betafn = function(x, y) {
+            return jStat.gammafn(x) * jStat.gammafn(y) / jStat.gammafn(x + y);
+        };
+
+        // Incomplete Beta
+        jStat.ibeta = function(x, a, b, regularized) {
+            if (regularized === undefined) regularized = true;
+            var bt;
+            if (x === 0) return 0;
+            if (x === 1) return 1;
+            bt = Math.exp(jStat.loggamma(a + b) - jStat.loggamma(a) - jStat.loggamma(b) + a * Math.log(x) + b * Math.log(1 - x));
+            if (x < (a + 1) / (a + b + 2)) {
+                return regularized ? bt * jStat.betacf(x, a, b) / a : bt * jStat.betacf(x, a, b) / a;
+            } else {
+                return regularized ? 1 - bt * jStat.betacf(1 - x, b, a) / b : 1 - bt * jStat.betacf(1 - x, b, a) / b;
+            }
+        };
+
+        // Beta continued fraction
+        jStat.betacf = function(x, a, b) {
+            var qab = a + b;
+            var qap = a + 1;
+            var qam = a - 1;
+            var c = 1;
+            var d = 1 - qab * x / qap;
+            if (Math.abs(d) < 1e-30) d = 1e-30;
+            d = 1 / d;
+            var h = d;
+            var m, aa, del;
+            for (m = 1; m <= 100; m++) {
+                var m2 = 2 * m;
+                aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+                d = 1 + aa * d;
+                if (Math.abs(d) < 1e-30) d = 1e-30;
+                c = 1 + aa / c;
+                if (Math.abs(c) < 1e-30) c = 1e-30;
+                d = 1 / d;
+                h *= d * c;
+                aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+                d = 1 + aa * d;
+                if (Math.abs(d) < 1e-30) d = 1e-30;
+                c = 1 + aa / c;
+                if (Math.abs(c) < 1e-30) c = 1e-30;
+                d = 1 / d;
+                del = d * c;
+                h *= del;
+                if (Math.abs(del - 1) < 3.7e-15) break;
+            }
+            return h;
+        };
+
+        // Error Function
+        jStat.erf = function(x) {
+            // Abramowitz and Stegun 7.1.26
+            var a1 =  0.254829592,
+                a2 = -0.284496736,
+                a3 =  1.421413741,
+                a4 = -1.453152027,
+                a5 =  1.061405429,
+                p  =  0.3275911;
+
+            // Save the sign of x
+            var sign = x < 0 ? -1 : 1;
+            x = Math.abs(x);
+
+            // A&S formula 7.1.26
+            var t = 1.0 / (1.0 + p * x);
+            var y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+
+            return sign * y;
+        };
+
+        // Complementary Error Function
+        jStat.erfc = function(x) {
+            return 1 - jStat.erf(x);
+        };
+
+        // Complementary Error Function Inverse
+        jStat.erfcinv = function(p) {
+            if (p >= 2) return -100;
+            if (p <= 0) return 100;
+            var pp = p < 1 ? p : 2 - p;
+            var t = Math.sqrt(-2 * Math.log(pp));
+            var x = -0.70711 * ((2.30753 + t * 0.27061) / (1 + t * (0.99229 + t * 0.04481)) - t);
+            for (var j = 0; j < 2; j++) {
+                var err = jStat.erfc(x) - pp;
+                x += err / (1.12837916709551257 * Math.exp(-x * x) - x * err);
+            }
+            return p < 1 ? x : -x;
+        };
+
+        // Lower Regularized Gamma
+        jStat.lowRegGamma = function(a, x) {
+            if (x < 0 || a <= 0) return NaN;
+            if (x < a + 1) {
+                var del = 1.0 / a, d = 1.0 / a, h = del;
+                for (var i = 1; i <= 100; i++) {
+                    del *= x / (a + i);
+                    d += del;
+                    h *= del / (a + i);
+                    if (Math.abs(del) < Math.abs(h) * 3.7e-15) break;
+                }
+                return h * Math.exp(-x + a * Math.log(x) - jStat.loggamma(a));
+            } else {
+                var b = x + 1 - a, c = 1 / 1.0e-30, d = 1 / b, h = d;
+                for (var i = 1; i <= 100; i++) {
+                    var an = -i * (i - a);
+                    b += 2;
+                    d = an * d + b;
+                    if (Math.abs(d) < 1e-30) d = 1e-30;
+                    c = b + an / c;
+                    if (Math.abs(c) < 1e-30) c = 1e-30;
+                    d = 1 / d;
+                    var del = d * c;
+                    h *= del;
+                    if (Math.abs(del - 1) < 3.7e-15) break;
+                }
+                return Math.exp(-x + a * Math.log(x) - jStat.loggamma(a)) * h;
+            }
+        };
+
+        // Binary search for inverse CDF
+        jStat.invfind = function(p, params, cdf, min, max) {
+            var x, fx;
+            var tol = 1e-10;
+            var maxIter = 100;
+            for (var i = 0; i < maxIter; i++) {
+                x = (min + max) / 2;
+                fx = cdf(x, params) - p;
+                if (Math.abs(fx) < tol) return x;
+                if (fx > 0) {
+                    max = x;
+                } else {
+                    min = x;
+                }
+            }
+            return x;
+        };
+
+        // Normal Distribution
+        jStat.normal = {
+            pdf: function(x, mean, std) {
+                mean = mean !== undefined ? mean : 0;
+                std = std !== undefined ? std : 1;
+                return 1 / (std * Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * Math.pow((x - mean) / std, 2));
+            },
+            cdf: function(x, mean, std) {
+                mean = mean !== undefined ? mean : 0;
+                std = std !== undefined ? std : 1;
+                return 0.5 * (1 + jStat.erf((x - mean) / (std * Math.sqrt(2))));
+            },
+            inv: function(p, mean, std) {
+                mean = mean !== undefined ? mean : 0;
+                std = std !== undefined ? std : 1;
+                return -1.4142135623730951 * std * jStat.erfcinv(2 * p) + mean;
+            }
+        };
+
+        // Student's t Distribution
+        jStat.studentt = {
+            pdf: function(x, dof) {
+                dof = dof > 1e100 ? 1e100 : dof;
+                return 1 / (Math.sqrt(dof) * jStat.betafn(0.5, 0.5 * dof)) * 
+                       Math.pow(1 + x * x / dof, -0.5 * (dof + 1));
+            },
+            cdf: function(x, dof) {
+                var dof2 = dof / 2;
+                return x > 0 ? 
+                    1 - 0.5 * jStat.ibeta(dof2 / (dof2 + x * x / 2), dof2, 0.5) :
+                    0.5 * jStat.ibeta(dof2 / (dof2 + x * x / 2), dof2, 0.5);
+            },
+            inv: function(p, dof) {
+                return jStat.invfind(p, dof, jStat.studentt.cdf, -100, 100);
+            }
+        };
+
+        // Chi-square Distribution
+        jStat.chisquare = {
+            pdf: function(x, dof) {
+                if (x < 0) return 0;
+                return (Math.pow(x, dof / 2 - 1) * Math.exp(-x / 2)) / 
+                       (Math.pow(2, dof / 2) * jStat.gammafn(dof / 2));
+            },
+            cdf: function(x, dof) {
+                if (x < 0) return 0;
+                return jStat.lowRegGamma(dof / 2, x / 2);
+            },
+            inv: function(p, dof) {
+                return jStat.invfind(p, dof, jStat.chisquare.cdf, 0, 1000);
+            }
+        };
+
+        // F Distribution
+        jStat.centralF = {
+            pdf: function(x, df1, df2) {
+                if (x < 0) return 0;
+                return Math.sqrt(Math.pow(df1 * x, df1) * Math.pow(df2, df2) / 
+                       Math.pow(df1 * x + df2, df1 + df2)) / 
+                       (x * jStat.betafn(df1 / 2, df2 / 2));
+            },
+            cdf: function(x, df1, df2) {
+                if (x < 0) return 0;
+                return 1 - jStat.ibeta(df2 / (df1 * x + df2), df2 / 2, df1 / 2);
+            },
+            inv: function(p, df1, df2) {
+                return jStat.invfind(p, { df1: df1, df2: df2 }, function(x, params) { return jStat.centralF.cdf(x, params.df1, params.df2); }, 0, 1000);
+            }
+        };
+
+        // Descriptive Statistics
+        jStat.mean = function(arr) {
+            return arr.reduce(function(a, b) { return a + b; }, 0) / arr.length;
+        };
+
+        jStat.variance = function(arr) {
+            var mean = jStat.mean(arr);
+            var sum = 0;
+            for (var i = 0; i < arr.length; i++) {
+                sum += Math.pow(arr[i] - mean, 2);
+            }
+            return sum / (arr.length - 1);
+        };
+
+        jStat.stdev = function(arr) {
+            return Math.sqrt(jStat.variance(arr));
+        };
+
+        jStat.min = function(arr) {
+            return Math.min.apply(null, arr);
+        };
+
+        jStat.max = function(arr) {
+            return Math.max.apply(null, arr);
+        };
+
+        jStat.sort = function(arr) {
+            return arr.slice().sort(function(a, b) { return a - b; });
+        };
+
+        return jStat;
+    })();
+
+    // ============================================
+    // Main Application Code
+    // ============================================
+
+    document.addEventListener('DOMContentLoaded', function() {
+
+        // Test jStat PDF functions
+        console.log('=== Testing jStat PDF functions ===');
+        console.log('Normal PDF at 0:', jStat.normal.pdf(0, 0, 1));
+        console.log('Student PDF at 0 (ddl=10):', jStat.studentt.pdf(0, 10));
+        console.log('Chi-2 PDF at 5 (ddl=10):', jStat.chisquare.pdf(5, 10));
+        console.log('Fisher PDF at 2 (ddl1=5, ddl2=10):', jStat.centralF.pdf(2, 5, 10));
+        
+        // Test Gamma function
+        console.log('=== Testing Gamma function ===');
+        console.log('Gamma(0.5):', jStat.gammafn(0.5));
+        console.log('Gamma(1):', jStat.gammafn(1));
+        console.log('Gamma(2):', jStat.gammafn(2));
+        console.log('Gamma(2.5):', jStat.gammafn(2.5));
+        console.log('Gamma(5):', jStat.gammafn(5));
+        console.log('Gamma(10):', jStat.gammafn(10));
+        console.log('=== Tests complete ===');
+
+
+        // Helper: Reset form for a specific law
+        function resetLawForm(lawName) {
+            var resultsBox = document.getElementById(lawName + '-results');
+            var decisionCard = document.getElementById(lawName + '-decision');
+            var conclusion = document.getElementById(lawName + '-conclusion');
+            var chartContainer = document.getElementById(lawName + '-chart-container');
+            
+            if (resultsBox) resultsBox.classList.remove('visible');
+            if (decisionCard) decisionCard.classList.remove('visible');
+            if (conclusion) conclusion.classList.remove('visible');
+            if (chartContainer) chartContainer.classList.remove('visible');
+        }
+
+        // Tab switching
+        document.querySelectorAll('.nav-item').forEach(function(item) {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.nav-item').forEach(function(i) { i.classList.remove('active'); });
+                document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+                this.classList.add('active');
+                var tabId = 'tab-' + this.dataset.tab;
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+
+        // Law selector
+        var lawSelect = document.getElementById('law-select');
+        if (lawSelect) {
+            lawSelect.addEventListener('change', function() {
+                var selectedLaw = this.value;
+                document.querySelectorAll('.law-content').forEach(function(card) {
+                    card.style.display = 'none';
+                });
+                var targetCard = document.getElementById('law-' + selectedLaw);
+                if (targetCard) {
+                    targetCard.style.display = 'block';
+                }
+            });
+        }
+
+        // Alpha buttons
+        document.querySelectorAll('.alpha-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var parent = this.closest('.form-group');
+                if (parent) {
+                    parent.querySelectorAll('.alpha-btn').forEach(function(b) { b.classList.remove('active'); });
+                    this.classList.add('active');
+                    var alphaInput = parent.querySelector('input[type="number"]');
+                    if (alphaInput) {
+                        alphaInput.value = this.dataset.alpha;
+                    }
+                }
+            });
+        });
+
+        // Radio option styling with mode switching
+        document.querySelectorAll('.radio-option').forEach(function(option) {
+            option.addEventListener('click', function() {
+                var radio = this.querySelector('input[type="radio"]');
+                if (radio) {
+                    radio.checked = true;
+                    var name = radio.name;
+                    document.querySelectorAll('input[name="' + name + '"]').forEach(function(r) {
+                        r.closest('.radio-option').classList.remove('selected');
+                    });
+                    this.classList.add('selected');
+                    
+                    if (name.includes('-mode')) {
+                        var lawName = name.split('-')[0];
+                        var mode = radio.value;
+                        var xInputId, pInputId;
+                        
+                        if (lawName === 'normal') { xInputId = 'normal-x-input'; pInputId = 'normal-p-input'; }
+                        else if (lawName === 'student') { xInputId = 'student-t-input'; pInputId = 'student-p-input'; }
+                        else if (lawName === 'chi2') { xInputId = 'chi2-chi2-input'; pInputId = 'chi2-p-input'; }
+                        else if (lawName === 'fisher') { xInputId = 'fisher-f-input'; pInputId = 'fisher-p-input'; }
+                        
+                        var xInput = document.getElementById(xInputId);
+                        var pInput = document.getElementById(pInputId);
+                        if (xInput && pInput) {
+                            if (mode === 'x' || mode === 't' || mode === 'chi2' || mode === 'f') {
+                                xInput.style.display = 'block';
+                                pInput.style.display = 'none';
+                            } else {
+                                xInput.style.display = 'none';
+                                pInput.style.display = 'block';
+                            }
+                        }
+                    }
+                }
+            });
+        });
+
+        // Helper functions
+        function showResultBox(lawName) {
+            var box = document.getElementById(lawName + '-results');
+            var decision = document.getElementById(lawName + '-decision');
+            var conclusion = document.getElementById(lawName + '-conclusion');
+            var chart = document.getElementById(lawName + '-chart-container');
+            if (box) box.classList.add('visible');
+            if (decision) decision.classList.add('visible');
+            if (conclusion) conclusion.classList.add('visible');
+            if (chart) chart.classList.add('visible');
+        }
+
+        function getTestType(lawName) {
+            var radios = document.querySelectorAll('input[name="' + lawName + '-test"]');
+            for (var i = 0; i < radios.length; i++) {
+                if (radios[i].checked) return radios[i].value;
+            }
+            return 'two';
+        }
+
+        function getMode(lawName) {
+            var radios = document.querySelectorAll('input[name="' + lawName + '-mode"]');
+            for (var i = 0; i < radios.length; i++) {
+                if (radios[i].checked) return radios[i].value;
+            }
+            return 'x';
+        }
+
+        function updateDecision(lawName, pValue, alpha, rejected) {
+            var decisionCard = document.getElementById(lawName + '-decision');
+            var decisionIcon = document.getElementById(lawName + '-decision-icon');
+            var decisionTitle = document.getElementById(lawName + '-decision-title');
+            var decisionSubtitle = document.getElementById(lawName + '-decision-subtitle');
+            var conclusion = document.getElementById(lawName + '-conclusion');
+
+            if (decisionCard) {
+                decisionCard.className = 'decision-card visible ' + (rejected ? 'rejected' : 'not-rejected');
+            }
+            if (decisionIcon) {
+                decisionIcon.textContent = rejected ? '❌' : '✅';
+            }
+            if (decisionTitle) {
+                decisionTitle.textContent = rejected ? 'H0 REJETÉE' : 'H0 NON REJETÉE';
+            }
+            if (decisionSubtitle) {
+                decisionSubtitle.textContent = 'p-value = ' + pValue.toFixed(6) + ', α = ' + alpha.toFixed(3);
+            }
+            
+            if (conclusion) {
+                var testType = getTestType(lawName);
+                var testText = testType === 'left' ? 'unilatéral à gauche' : testType === 'right' ? 'unilatéral à droite' : 'bilatéral';
+                conclusion.textContent = rejected
+                    ? 'Puisque p-value (' + pValue.toFixed(6) + ') ≤ α (' + alpha.toFixed(3) + '), on rejette H0 au seuil ' + alpha.toFixed(3) + ' (test ' + testText + ').'
+                    : 'Puisque p-value (' + pValue.toFixed(6) + ') > α (' + alpha.toFixed(3) + '), on ne rejette pas H0 au seuil ' + alpha.toFixed(3) + ' (test ' + testText + ').';
+                conclusion.classList.add('visible');
+            }
+        }
+
+        function drawDistribution(lawName, xValue, criticalValue, testType, alpha) {
+            console.log('=== DRAWING ' + lawName.toUpperCase() + ' ===');
+            var svg = document.getElementById(lawName + '-chart');
+            console.log('SVG found:', !!svg);
+            if (!svg) return;
+
+            svg.innerHTML = '';
+
+            var width = 400;
+            var height = 200;
+            var padding = 30;
+            var plotWidth = width - 2 * padding;
+            var plotHeight = height - 2 * padding;
+
+            var minX = -4, maxX = 4;
+            var pdfFunc;
+
+            if (lawName === 'normal') {
+                pdfFunc = function(x) { return jStat.normal.pdf(x, 0, 1); };
+            } else if (lawName === 'student') {
+                var ddl = parseFloat(document.getElementById('student-ddl').value);
+                pdfFunc = function(x) { return jStat.studentt.pdf(x, ddl); };
+                minX = -5; maxX = 5;
+            } else if (lawName === 'chi2') {
+                var ddl = parseFloat(document.getElementById('chi2-ddl').value);
+                pdfFunc = function(x) { return x >= 0 ? jStat.chisquare.pdf(x, ddl) : 0; };
+                minX = 0;
+                maxX = Math.max(10, ddl * 3);
+                console.log('Chi2 ddl:', ddl, 'minX:', minX, 'maxX:', maxX);
+            } else if (lawName === 'fisher') {
+                var ddl1 = parseFloat(document.getElementById('fisher-ddl1').value);
+                var ddl2 = parseFloat(document.getElementById('fisher-ddl2').value);
+                pdfFunc = function(x) { return x >= 0 ? jStat.centralF.pdf(x, ddl1, ddl2) : 0; };
+                minX = 0;
+                maxX = Math.max(10, (ddl1 / ddl2) * 4);
+                console.log('Fisher ddl1:', ddl1, 'ddl2:', ddl2, 'minX:', minX, 'maxX:', maxX);
+            }
+
+            var maxPDF = 0;
+            var testPoints = 50;
+            for (var i = 0; i <= testPoints; i++) {
+                var x = minX + (i / testPoints) * (maxX - minX);
+                var pdf = pdfFunc(x);
+                if (isFinite(pdf) && pdf > maxPDF) maxPDF = pdf;
+            }
+
+            if (maxPDF === 0 || !isFinite(maxPDF)) {
+                maxPDF = 1;
+            }
+            // Add 10% padding at the top for better visibility
+            maxPDF = maxPDF * 1.1;
+            console.log('maxPDF (with 10% padding):', maxPDF);
+
+            var scaleX = function(x) { return padding + (x - minX) / (maxX - minX) * plotWidth; };
+            var scaleY = function(y) { return height - padding - (y / maxPDF) * plotHeight; };
+
+            // Build the main distribution curve
+            var pathD = '';
+            var numPoints = 200;
+            var firstPointFound = false;
+            
+            for (var i = 0; i <= numPoints; i++) {
+                var x = minX + (i / numPoints) * (maxX - minX);
+                var y = pdfFunc(x);
+                if (isFinite(y) && y >= 0) {
+                    var sx = scaleX(x);
+                    var sy = scaleY(y);
+                    // Only add if coordinates are valid
+                    if (isFinite(sx) && isFinite(sy) && sx >= 0 && sx <= width && sy >= 0 && sy <= height) {
+                        if (!firstPointFound) {
+                            pathD = 'M ' + sx + ' ' + sy;
+                            firstPointFound = true;
+                        } else {
+                            pathD += ' L ' + sx + ' ' + sy;
+                        }
+                    }
+                }
+            }
+
+            console.log('Generated path with', pathD ? pathD.split('L').length : 0, 'segments');
+            
+            // Log a few sample points for debugging
+            if (pathD) {
+                console.log('Sample path:', pathD.substring(0, 100));
+                // Test first few y-values
+                for (var i = 0; i <= 5; i++) {
+                    var x = minX + (i / 5) * (maxX - minX);
+                    var y = pdfFunc(x);
+                    console.log('x=' + x.toFixed(2) + ', y=' + y.toFixed(4) + ', scaledY=' + scaleY(y).toFixed(1));
+                }
+            }
+
+            if (pathD.length > 10) {
+                console.log('Creating path with length:', pathD.length);
+                var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', pathD);
+                path.setAttribute('fill', 'none');
+                path.setAttribute('stroke', '#2563eb');
+                path.setAttribute('stroke-width', '2');
+                svg.appendChild(path);
+                console.log('Path added to SVG');
+            } else {
+                console.log('Path too short:', pathD.length);
+            }
+
+            var fillPath = '';
+            if (testType === 'left') {
+                fillPath = 'M ' + scaleX(minX) + ' ' + scaleY(0);
+                for (var x = minX; x <= criticalValue; x += Math.max((criticalValue - minX) / 50, 0.01)) {
+                    var y = pdfFunc(x);
+                    if (isFinite(y) && y > 0) {
+                        fillPath += ' L ' + scaleX(x) + ' ' + scaleY(y);
+                    }
+                }
+                fillPath += ' L ' + scaleX(criticalValue) + ' ' + scaleY(0) + ' Z';
+            } else if (testType === 'right') {
+                fillPath = 'M ' + scaleX(criticalValue) + ' ' + scaleY(0);
+                for (var x = criticalValue; x <= maxX; x += Math.max((maxX - criticalValue) / 50, 0.01)) {
+                    var y = pdfFunc(x);
+                    if (isFinite(y) && y > 0) {
+                        fillPath += ' L ' + scaleX(x) + ' ' + scaleY(y);
+                    }
+                }
+                fillPath += ' L ' + scaleX(maxX) + ' ' + scaleY(0) + ' Z';
+            } else {
+                // Bilateral test
+                if (minX >= 0) {
+                    // For Chi-2 and Fisher (only positive), bilateral becomes right-tailed
+                    fillPath = 'M ' + scaleX(criticalValue) + ' ' + scaleY(0);
+                    for (var x = criticalValue; x <= maxX; x += Math.max((maxX - criticalValue) / 50, 0.01)) {
+                        var y = pdfFunc(x);
+                        if (isFinite(y) && y > 0) {
+                            fillPath += ' L ' + scaleX(x) + ' ' + scaleY(y);
+                        }
+                    }
+                    fillPath += ' L ' + scaleX(maxX) + ' ' + scaleY(0) + ' Z';
+                } else {
+                    // For Normal and Student (symmetric), fill both tails
+                    fillPath = 'M ' + scaleX(minX) + ' ' + scaleY(0);
+                    for (var x = minX; x <= -Math.abs(criticalValue); x += Math.max((-Math.abs(criticalValue) - minX) / 50, 0.01)) {
+                        var y = pdfFunc(x);
+                        if (isFinite(y) && y > 0) {
+                            fillPath += ' L ' + scaleX(x) + ' ' + scaleY(y);
+                        }
+                    }
+                    fillPath += ' L ' + scaleX(-Math.abs(criticalValue)) + ' ' + scaleY(0);
+                    fillPath += ' M ' + scaleX(Math.abs(criticalValue)) + ' ' + scaleY(0);
+                    for (var x = Math.abs(criticalValue); x <= maxX; x += Math.max((maxX - Math.abs(criticalValue)) / 50, 0.01)) {
+                        var y = pdfFunc(x);
+                        if (isFinite(y) && y > 0) {
+                            fillPath += ' L ' + scaleX(x) + ' ' + scaleY(y);
+                        }
+                    }
+                    fillPath += ' L ' + scaleX(maxX) + ' ' + scaleY(0) + ' Z';
+                }
+            }
+
+            if (fillPath && fillPath.length > 10) {
+                var fill = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                fill.setAttribute('d', fillPath);
+                fill.setAttribute('fill', 'rgba(239, 68, 68, 0.3)');
+                fill.setAttribute('stroke', 'none');
+                svg.appendChild(fill);
+            }
+
+            // Draw x value line if provided
+            if (xValue !== null && isFinite(xValue)) {
+                var xLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                xLine.setAttribute('x1', scaleX(xValue));
+                xLine.setAttribute('y1', scaleY(0));
+                xLine.setAttribute('x2', scaleX(xValue));
+                xLine.setAttribute('y2', scaleY(pdfFunc(xValue)));
+                xLine.setAttribute('stroke', '#22c55e');
+                xLine.setAttribute('stroke-width', '2');
+                xLine.setAttribute('stroke-dasharray', '5,5');
+                svg.appendChild(xLine);
+
+                var xText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                xText.setAttribute('x', scaleX(xValue));
+                xText.setAttribute('y', scaleY(pdfFunc(xValue)) - 5);
+                xText.setAttribute('text-anchor', 'middle');
+                xText.setAttribute('font-size', '12');
+                xText.setAttribute('fill', '#22c55e');
+                xText.textContent = 'x=' + xValue.toFixed(2);
+                svg.appendChild(xText);
+            }
+
+            var xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            xAxis.setAttribute('x1', padding);
+            xAxis.setAttribute('y1', height - padding);
+            xAxis.setAttribute('x2', width - padding);
+            xAxis.setAttribute('y2', height - padding);
+            xAxis.setAttribute('stroke', '#64748b');
+            xAxis.setAttribute('stroke-width', '1');
+            svg.appendChild(xAxis);
+        }
+
+        // Reset buttons for each law
+        ['normal', 'student', 'chi2', 'fisher'].forEach(function(lawName) {
+            var resetBtn = document.getElementById(lawName + '-reset');
+            if (resetBtn) {
+                resetBtn.addEventListener('click', function() {
+                    resetLawForm(lawName);
+                });
+            }
+        });
+
+        // Normal Distribution Calculation
+        var normalCalcBtn = document.getElementById('normal-calculate');
+        if (normalCalcBtn) {
+            function handleNormalCalculate() {
+                try {
+                    // Get input values
+                    var alphaInput = document.getElementById('normal-alpha');
+                    var xInput = document.getElementById('normal-x');
+                    var pInput = document.getElementById('normal-p-input-val');
+                    
+                    var alpha = parseFloat(alphaInput ? alphaInput.value : '0.05');
+                    
+                    // Get test type
+                    var testRadios = document.getElementsByName('normal-test');
+                    var testType = 'two';
+                    for (var i = 0; i < testRadios.length; i++) {
+                        if (testRadios[i].checked) {
+                            testType = testRadios[i].value;
+                            break;
+                        }
+                    }
+                    
+                    // Get mode
+                    var modeRadios = document.getElementsByName('normal-mode');
+                    var mode = 'x';
+                    for (var i = 0; i < modeRadios.length; i++) {
+                        if (modeRadios[i].checked) {
+                            mode = modeRadios[i].value;
+                            break;
+                        }
+                    }
+                    
+                    var x, pValue;
+                    
+                    if (mode === 'x') {
+                        x = parseFloat(xInput ? xInput.value : '0');
+                        
+                        // Calculate p-value using CDF
+                        var pLeft = 0.5 * (1 + jStat.erf(x / Math.sqrt(2)));
+                        
+                        if (testType === 'left') {
+                            pValue = pLeft;
+                        } else if (testType === 'right') {
+                            pValue = 1 - pLeft;
+                        } else {
+                            // Bilateral
+                            pValue = 2 * Math.min(pLeft, 1 - pLeft);
+                        }
+                        
+                    } else {
+                        pValue = parseFloat(pInput ? pInput.value : '0.5');
+                        
+                        // Calculate x from p using inverse
+                        if (testType === 'left') {
+                            x = -1.4142135623730951 * jStat.erfcinv(2 * pValue);
+                        } else if (testType === 'right') {
+                            x = -1.4142135623730951 * jStat.erfcinv(2 * (1 - pValue));
+                        } else {
+                            // Bilateral
+                            x = -1.4142135623730951 * jStat.erfcinv(2 * (1 - pValue / 2));
+                        }
+                    }
+                    
+                    // Calculate critical value
+                    var critical;
+                    if (testType === 'left') {
+                        critical = -1.4142135623730951 * jStat.erfcinv(2 * alpha);
+                    } else if (testType === 'right') {
+                        critical = -1.4142135623730951 * jStat.erfcinv(2 * (1 - alpha));
+                    } else {
+                        // Bilateral
+                        critical = -1.4142135623730951 * jStat.erfcinv(2 * (1 - alpha / 2));
+                    }
+                    
+                    // Decision
+                    var rejected = pValue <= alpha;
+                    
+                    // Update UI
+                    var pvalueEl = document.getElementById('normal-pvalue');
+                    var criticalEl = document.getElementById('normal-critical');
+                    
+                    if (pvalueEl) {
+                        pvalueEl.textContent = pValue.toFixed(6);
+                    }
+                    if (criticalEl) {
+                        criticalEl.textContent = critical.toFixed(4);
+                    }
+                    
+                    // Update decision card
+                    updateDecision('normal', pValue, alpha, rejected);
+                    
+                    // Draw chart
+                    drawDistribution('normal', mode === 'x' ? x : null, critical, testType, alpha);
+                    
+                    // Show results
+                    showResultBox('normal');
+                    
+                } catch (e) {
+                    alert('Erreur de calcul: ' + e.message);
+                }
+            }
+            
+            normalCalcBtn.addEventListener('click', handleNormalCalculate, false);
+            normalCalcBtn.onclick = handleNormalCalculate;
+        }
+
+        // Student's t Distribution Calculation
+        var studentCalcBtn = document.getElementById('student-calculate');
+        if (studentCalcBtn) {
+            studentCalcBtn.addEventListener('click', function() {
+                try {
+                    var ddl = parseFloat(document.getElementById('student-ddl').value);
+                var alpha = parseFloat(document.getElementById('student-alpha').value);
+                var mode = getMode('student');
+                var testType = getTestType('student');
+                var t, pValue;
+
+                if (mode === 't') {
+                    t = parseFloat(document.getElementById('student-t').value);
+                    var pLeft = jStat.studentt.cdf(t, ddl);
+                    if (testType === 'left') {
+                        pValue = pLeft;
+                    } else if (testType === 'right') {
+                        pValue = 1 - pLeft;
+                    } else {
+                        pValue = 2 * Math.min(pLeft, 1 - pLeft);
+                    }
+                } else {
+                    pValue = parseFloat(document.getElementById('student-p-input-val').value);
+                    if (testType === 'left') {
+                        t = jStat.studentt.inv(pValue, ddl);
+                    } else if (testType === 'right') {
+                        t = jStat.studentt.inv(1 - pValue, ddl);
+                    } else {
+                        t = jStat.studentt.inv(1 - pValue / 2, ddl);
+                    }
+                }
+
+                var critical;
+                if (testType === 'left') {
+                    critical = jStat.studentt.inv(alpha, ddl);
+                } else if (testType === 'right') {
+                    critical = jStat.studentt.inv(1 - alpha, ddl);
+                } else {
+                    critical = jStat.studentt.inv(1 - alpha / 2, ddl);
+                }
+
+                var rejected = pValue <= alpha;
+
+                var pvalueEl = document.getElementById('student-pvalue');
+                var criticalEl = document.getElementById('student-critical');
+                if (pvalueEl) pvalueEl.textContent = pValue.toFixed(6);
+                if (criticalEl) criticalEl.textContent = critical.toFixed(4);
+                
+                var decisionCard = document.getElementById('student-decision');
+                if (decisionCard) {
+                    decisionCard.className = 'decision-card visible ' + (rejected ? 'rejected' : 'not-rejected');
+                    decisionCard.innerHTML = '<span class="icon">' + (rejected ? '❌' : '✅') + '</span>' +
+                        '<div class="title">' + (rejected ? 'H0 REJETÉE' : 'H0 NON REJETÉE') + '</div>' +
+                        '<div class="subtitle">p-value = ' + pValue.toFixed(6) + ', α = ' + alpha.toFixed(3) + '</div>';
+                }
+                
+                var conclusion = document.getElementById('student-conclusion');
+                if (conclusion) {
+                    var testText = testType === 'left' ? 'unilatéral à gauche' : testType === 'right' ? 'unilatéral à droite' : 'bilatéral';
+                    conclusion.textContent = rejected 
+                        ? 'Puisque p-value (' + pValue.toFixed(6) + ') ≤ α (' + alpha.toFixed(3) + '), on rejette H0 au seuil ' + alpha.toFixed(3) + ' (test ' + testText + ').'
+                        : 'Puisque p-value (' + pValue.toFixed(6) + ') > α (' + alpha.toFixed(3) + '), on ne rejette pas H0 au seuil ' + alpha.toFixed(3) + ' (test ' + testText + ').';
+                    conclusion.classList.add('visible');
+                }
+
+                drawDistribution('student', mode === 't' ? t : null, critical, testType, alpha);
+                showResultBox('student');
+                } catch (e) {
+                    alert('Erreur de calcul: ' + e.message);
+                }
+            });
+        }
+
+        // Chi-square Distribution Calculation
+        var chi2CalcBtn = document.getElementById('chi2-calculate');
+        if (chi2CalcBtn) {
+            chi2CalcBtn.addEventListener('click', function() {
+                try {
+                    var ddl = parseFloat(document.getElementById('chi2-ddl').value);
+                var alpha = parseFloat(document.getElementById('chi2-alpha').value);
+                var mode = getMode('chi2');
+                var testType = getTestType('chi2');
+                var chi2, pValue;
+
+                if (mode === 'chi2') {
+                    chi2 = parseFloat(document.getElementById('chi2-val').value);
+                    var pRight = 1 - jStat.chisquare.cdf(chi2, ddl);
+                    if (testType === 'left') {
+                        pValue = jStat.chisquare.cdf(chi2, ddl);
+                    } else if (testType === 'right') {
+                        pValue = pRight;
+                    } else {
+                        pValue = 2 * Math.min(jStat.chisquare.cdf(chi2, ddl), pRight);
+                    }
+                } else {
+                    pValue = parseFloat(document.getElementById('chi2-p-input-val').value);
+                    if (testType === 'left') {
+                        chi2 = jStat.chisquare.inv(1 - pValue, ddl);
+                    } else if (testType === 'right') {
+                        chi2 = jStat.chisquare.inv(pValue, ddl);
+                    } else {
+                        chi2 = jStat.chisquare.inv(pValue / 2, ddl);
+                    }
+                }
+
+                var critical;
+                if (testType === 'left') {
+                    critical = jStat.chisquare.inv(1 - alpha, ddl);
+                } else if (testType === 'right') {
+                    critical = jStat.chisquare.inv(alpha, ddl);
+                } else {
+                    critical = jStat.chisquare.inv(alpha / 2, ddl);
+                }
+
+                var rejected = pValue <= alpha;
+
+                var pvalueEl = document.getElementById('chi2-pvalue');
+                var criticalEl = document.getElementById('chi2-critical');
+                if (pvalueEl) pvalueEl.textContent = pValue.toFixed(6);
+                if (criticalEl) criticalEl.textContent = critical.toFixed(4);
+                
+                var decisionCard = document.getElementById('chi2-decision');
+                if (decisionCard) {
+                    decisionCard.className = 'decision-card visible ' + (rejected ? 'rejected' : 'not-rejected');
+                    decisionCard.innerHTML = '<span class="icon">' + (rejected ? '❌' : '✅') + '</span>' +
+                        '<div class="title">' + (rejected ? 'H0 REJETÉE' : 'H0 NON REJETÉE') + '</div>' +
+                        '<div class="subtitle">p-value = ' + pValue.toFixed(6) + ', α = ' + alpha.toFixed(3) + '</div>';
+                }
+                
+                var conclusion = document.getElementById('chi2-conclusion');
+                if (conclusion) {
+                    var testText = testType === 'left' ? 'unilatéral à gauche' : testType === 'right' ? 'unilatéral à droite' : 'bilatéral';
+                    conclusion.textContent = rejected 
+                        ? 'Puisque p-value (' + pValue.toFixed(6) + ') ≤ α (' + alpha.toFixed(3) + '), on rejette H0 au seuil ' + alpha.toFixed(3) + ' (test ' + testText + ').'
+                        : 'Puisque p-value (' + pValue.toFixed(6) + ') > α (' + alpha.toFixed(3) + '), on ne rejette pas H0 au seuil ' + alpha.toFixed(3) + ' (test ' + testText + ').';
+                    conclusion.classList.add('visible');
+                }
+
+                drawDistribution('chi2', mode === 'chi2' ? chi2 : null, critical, testType, alpha);
+                showResultBox('chi2');
+                } catch (e) {
+                    alert('Erreur de calcul: ' + e.message);
+                }
+            });
+        }
+
+        // F Distribution Calculation
+        var fisherCalcBtn = document.getElementById('fisher-calculate');
+        if (fisherCalcBtn) {
+            fisherCalcBtn.addEventListener('click', function() {
+                try {
+                    var ddl1 = parseFloat(document.getElementById('fisher-ddl1').value);
+                var ddl2 = parseFloat(document.getElementById('fisher-ddl2').value);
+                var alpha = parseFloat(document.getElementById('fisher-alpha').value);
+                var mode = getMode('fisher');
+                var testType = getTestType('fisher');
+                var f, pValue;
+
+                if (mode === 'f') {
+                    f = parseFloat(document.getElementById('fisher-val').value);
+                    var pRight = 1 - jStat.centralF.cdf(f, ddl1, ddl2);
+                    if (testType === 'left') {
+                        pValue = jStat.centralF.cdf(f, ddl1, ddl2);
+                    } else if (testType === 'right') {
+                        pValue = pRight;
+                    } else {
+                        pValue = 2 * Math.min(jStat.centralF.cdf(f, ddl1, ddl2), pRight);
+                    }
+                } else {
+                    pValue = parseFloat(document.getElementById('fisher-p-input-val').value);
+                    if (testType === 'left') {
+                        f = jStat.centralF.inv(1 - pValue, ddl1, ddl2);
+                    } else if (testType === 'right') {
+                        f = jStat.centralF.inv(pValue, ddl1, ddl2);
+                    } else {
+                        f = jStat.centralF.inv(pValue / 2, ddl1, ddl2);
+                    }
+                }
+
+                var critical;
+                if (testType === 'left') {
+                    critical = jStat.centralF.inv(1 - alpha, ddl1, ddl2);
+                } else if (testType === 'right') {
+                    critical = jStat.centralF.inv(alpha, ddl1, ddl2);
+                } else {
+                    critical = jStat.centralF.inv(alpha / 2, ddl1, ddl2);
+                }
+
+                var rejected = pValue <= alpha;
+
+                var pvalueEl = document.getElementById('fisher-pvalue');
+                var criticalEl = document.getElementById('fisher-critical');
+                if (pvalueEl) pvalueEl.textContent = pValue.toFixed(6);
+                if (criticalEl) criticalEl.textContent = critical.toFixed(4);
+                
+                var decisionCard = document.getElementById('fisher-decision');
+                if (decisionCard) {
+                    decisionCard.className = 'decision-card visible ' + (rejected ? 'rejected' : 'not-rejected');
+                    decisionCard.innerHTML = '<span class="icon">' + (rejected ? '❌' : '✅') + '</span>' +
+                        '<div class="title">' + (rejected ? 'H0 REJETÉE' : 'H0 NON REJETÉE') + '</div>' +
+                        '<div class="subtitle">p-value = ' + pValue.toFixed(6) + ', α = ' + alpha.toFixed(3) + '</div>';
+                }
+                
+                var conclusion = document.getElementById('fisher-conclusion');
+                if (conclusion) {
+                    var testText = testType === 'left' ? 'unilatéral à gauche' : testType === 'right' ? 'unilatéral à droite' : 'bilatéral';
+                    conclusion.textContent = rejected 
+                        ? 'Puisque p-value (' + pValue.toFixed(6) + ') ≤ α (' + alpha.toFixed(3) + '), on rejette H0 au seuil ' + alpha.toFixed(3) + ' (test ' + testText + ').'
+                        : 'Puisque p-value (' + pValue.toFixed(6) + ') > α (' + alpha.toFixed(3) + '), on ne rejette pas H0 au seuil ' + alpha.toFixed(3) + ' (test ' + testText + ').';
+                    conclusion.classList.add('visible');
+                }
+
+                drawDistribution('fisher', mode === 'f' ? f : null, critical, testType, alpha);
+                showResultBox('fisher');
+                } catch (e) {
+                    alert('Erreur de calcul: ' + e.message);
+                }
+            });
+        }
+
+        // Normality Tests
+        var calcNormalityBtn = document.getElementById('calculate-normality');
+        if (calcNormalityBtn) {
+            calcNormalityBtn.addEventListener('click', function() {
+                var input = document.getElementById('data-input').value;
+                var errorContainer = document.getElementById('error-container');
+                if (errorContainer) errorContainer.innerHTML = '';
+
+                var data = input.split(/[,\s\n]+/).map(function(s) { return parseFloat(s.trim()); }).filter(function(n) { return !isNaN(n); });
+
+                if (data.length < 3) {
+                    if (errorContainer) errorContainer.innerHTML = '<div class="error-message">Il faut au moins 3 données pour effectuer les tests.</div>';
+                    return;
+                }
+                if (data.length > 5000) {
+                    if (errorContainer) errorContainer.innerHTML = '<div class="error-message">Le test de Shapiro-Wilk est limité à 5000 observations.</div>';
+                    return;
+                }
+
+                var n = data.length;
+                var mean = jStat.mean(data);
+                var std = jStat.stdev(data);
+                
+                var statN = document.getElementById('stat-n');
+                var statMean = document.getElementById('stat-mean');
+                var statStd = document.getElementById('stat-std');
+                var infoStats = document.getElementById('info-stats');
+                
+                if (statN) statN.textContent = n;
+                if (statMean) statMean.textContent = mean.toFixed(4);
+                if (statStd) statStd.textContent = std.toFixed(4);
+                if (infoStats) infoStats.classList.add('visible');
+
+                // Shapiro-Wilk test (Royston approximation)
+                var sorted = jStat.sort(data);
+                var swW, swP;
+
+                if (n >= 3 && n <= 5000) {
+                    // Calculate expected normal order statistics
+                    var m = [];
+                    for (var i = 0; i < n; i++) {
+                        m.push(jStat.normal.inv((i + 0.5) / n, 0, 1));
+                    }
+                    
+                    var sumM = m.reduce(function(a, b) { return a + b; }, 0);
+                    var mCentered = m.map(function(mi) { return mi - sumM / n; });
+                    var sumM2 = mCentered.reduce(function(a, b) { return a + b * b; }, 0);
+                    
+                    // Calculate coefficients
+                    var a = [];
+                    for (var i = 0; i < n; i++) {
+                        a[i] = -mCentered[i] / Math.sqrt(sumM2);
+                    }
+                    
+                    // Calculate W statistic
+                    var numerator = 0;
+                    for (var i = 0; i < n; i++) {
+                        numerator += a[i] * sorted[i];
+                    }
+                    var denominator = 0;
+                    for (var i = 0; i < n; i++) {
+                        denominator += Math.pow(data[i] - mean, 2);
+                    }
+                    swW = (numerator * numerator) / denominator;
+                    
+                    // Royston approximation for p-value
+                    var logn = Math.log(n);
+                    var u, sigma;
+                    
+                    if (n <= 50) {
+                        var gamma = 2.706056 + 0.011439 * n - 0.032757 * n * n + 0.000555 * n * n * n;
+                        var mu = -1.5861 - 0.31082 * n - 0.083751 * n * n + 0.0038915 * n * n * n;
+                        sigma = Math.exp(0.0038915 * n - 0.083751 * n * n - 0.31082 * n - 1.5861);
+                        var z = Math.log(1 - swW);
+                        u = (z - mu) / sigma;
+                        swP = 1 - jStat.normal.cdf(u, 0, 1);
+                    } else {
+                        mu = -1.5861 - 0.31082 * logn - 0.083751 * logn * logn + 0.0038915 * logn * logn * logn;
+                        sigma = 0.0038915 * logn * logn * logn - 0.083751 * logn * logn - 0.31082 * logn - 1.5861;
+                        var z = Math.log(1 - swW);
+                        u = (z - mu) / sigma;
+                        swP = 1 - jStat.normal.cdf(Math.abs(u), 0, 1);
+                    }
+                } else {
+                    swW = NaN;
+                    swP = NaN;
+                }
+
+                // Jarque-Bera test
+                var n2 = n * n;
+                var m2 = data.reduce(function(sum, x) { return sum + Math.pow(x - mean, 2); }, 0) / n;
+                var m3 = data.reduce(function(sum, x) { return sum + Math.pow(x - mean, 3); }, 0) / n;
+                var m4 = data.reduce(function(sum, x) { return sum + Math.pow(x - mean, 4); }, 0) / n;
+                
+                var skewness = m3 / Math.pow(m2, 1.5);
+                var kurtosis = m4 / (m2 * m2);
+                var excessKurtosis = kurtosis - 3;
+                
+                var jb = (n / 6) * (skewness * skewness + (excessKurtosis * excessKurtosis) / 4);
+                var jbP = 1 - jStat.chisquare.cdf(jb, 2);
+
+                // Display Shapiro-Wilk results
+                var swWEl = document.getElementById('shapiro-w');
+                var swPEl = document.getElementById('shapiro-p');
+                var shapiroResult = document.getElementById('shapiro-result');
+                
+                if (swWEl && !isNaN(swW)) swWEl.textContent = swW.toFixed(6);
+                if (swPEl && !isNaN(swP)) swPEl.textContent = Math.max(1e-10, swP).toExponential(4);
+                if (shapiroResult) {
+                    shapiroResult.classList.add('visible');
+                    shapiroResult.classList.remove('success', 'error');
+                    shapiroResult.classList.add(swP > 0.05 ? 'success' : 'error');
+                }
+
+                // Display Jarque-Bera results
+                var skewEl = document.getElementById('jarque-skew');
+                var kurtEl = document.getElementById('jarque-kurt');
+                var excessEl = document.getElementById('jarque-excess');
+                var jbEl = document.getElementById('jarque-jb');
+                var jbPEl = document.getElementById('jarque-p');
+                var jarqueResult = document.getElementById('jarque-result');
+                
+                if (skewEl) skewEl.textContent = skewness.toFixed(4);
+                if (kurtEl) kurtEl.textContent = kurtosis.toFixed(4);
+                if (excessEl) excessEl.textContent = excessKurtosis.toFixed(4);
+                if (jbEl) jbEl.textContent = jb.toFixed(4);
+                if (jbPEl) jbPEl.textContent = jbP.toExponential(4);
+                if (jarqueResult) {
+                    jarqueResult.classList.add('visible');
+                    jarqueResult.classList.remove('success', 'error');
+                    jarqueResult.classList.add(jbP > 0.05 ? 'success' : 'error');
+                }
+
+                drawHistogram(data, mean, std);
+            });
+        }
+
+        var clearDataBtn = document.getElementById('clear-data');
+        if (clearDataBtn) {
+            clearDataBtn.addEventListener('click', function() {
+                var dataInput = document.getElementById('data-input');
+                if (dataInput) dataInput.value = '';
+                
+                var infoStats = document.getElementById('info-stats');
+                var shapiroResult = document.getElementById('shapiro-result');
+                var jarqueResult = document.getElementById('jarque-result');
+                var histogramContainer = document.getElementById('histogram-container');
+                var errorContainer = document.getElementById('error-container');
+                
+                if (infoStats) infoStats.classList.remove('visible');
+                if (shapiroResult) shapiroResult.classList.remove('visible');
+                if (jarqueResult) jarqueResult.classList.remove('visible');
+                if (histogramContainer) histogramContainer.classList.remove('visible');
+                if (errorContainer) errorContainer.innerHTML = '';
+            });
+        }
+
+        function drawHistogram(data, mean, std) {
+            var canvas = document.getElementById('histogram');
+            if (!canvas) return;
+            
+            var ctx = canvas.getContext('2d');
+            var container = document.getElementById('histogram-container');
+            if (container) container.classList.add('visible');
+            
+            canvas.width = canvas.offsetWidth * 2;
+            canvas.height = 300;
+            
+            var width = canvas.width;
+            var height = canvas.height;
+            var padding = 60;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            var nBins = Math.min(20, Math.ceil(Math.sqrt(data.length)));
+            var minVal = jStat.min(data);
+            var maxVal = jStat.max(data);
+            var binWidth = (maxVal - minVal) / nBins;
+            
+            var bins = new Array(nBins).fill(0);
+            for (var i = 0; i < data.length; i++) {
+                var binIndex = Math.min(Math.floor((data[i] - minVal) / binWidth), nBins - 1);
+                bins[binIndex]++;
+            }
+            
+            var maxCount = Math.max.apply(null, bins);
+            
+            var barWidth = (width - 2 * padding) / nBins;
+            var maxHeight = height - 2 * padding;
+            
+            ctx.fillStyle = '#2563eb';
+            for (var i = 0; i < bins.length; i++) {
+                var barHeight = (bins[i] / maxCount) * maxHeight * 0.8;
+                var x = padding + i * barWidth + 2;
+                var y = height - padding - barHeight;
+                ctx.fillRect(x, y, barWidth - 4, barHeight);
+            }
+            
+            // Draw normal curve overlay
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            var step = (maxVal - minVal) / 100;
+            for (var x = minVal; x <= maxVal; x += step) {
+                var normalPdf = jStat.normal.pdf(x, mean, std);
+                var normalizedY = normalPdf / jStat.normal.pdf(mean, mean, std);
+                var canvasX = padding + ((x - minVal) / (maxVal - minVal)) * (width - 2 * padding);
+                var canvasY = height - padding - normalizedY * maxHeight * 0.8;
+                
+                if (x === minVal) {
+                    ctx.moveTo(canvasX, canvasY);
+                } else {
+                    ctx.lineTo(canvasX, canvasY);
+                }
+            }
+            ctx.stroke();
+            
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, height - padding);
+            ctx.lineTo(width - padding, height - padding);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#0f172a';
+            ctx.font = '20px system-ui';
+            ctx.textAlign = 'center';
+            ctx.fillText('Valeurs', width / 2, height - 15);
+            
+            ctx.save();
+            ctx.translate(15, height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('Fréquence', 0, 0);
+            ctx.restore();
+        }
+
+        // ============================================
+        // Tables Tab Logic
+        // ============================================
+        (function() {
+            var lawSelect = document.getElementById('tables-law-select');
+            var paramsContainer = document.getElementById('tables-params-container');
+            var calculateBtn = document.getElementById('tables-calculate-btn');
+            var resultDisplay = document.getElementById('tables-result-display');
+            var resultLabel = document.getElementById('tables-result-label');
+            var resultValue = document.getElementById('tables-result-value');
+            var resultDescription = document.getElementById('tables-result-description');
+            var queryHelp = document.getElementById('tables-query-help');
+
+            if (!lawSelect) return;
+
+            var currentQueryType = 'critical';
+
+            var getConfig = function() {
+                var law = lawSelect.value;
+                var queryType = currentQueryType;
+                var config = { params: [], help: '' };
+
+                if (queryType === 'critical') {
+                    config.help = 'Entrez α et les degrés de liberté. La table vous donne la valeur critique telle que P(X > valeur) = α.';
+                    
+                    config.params.push({
+                        id: 'alpha',
+                        label: 'Seuil α',
+                        type: 'number',
+                        min: 0.001,
+                        max: 0.5,
+                        step: 0.001,
+                        value: 0.05
+                    });
+
+                    if (law === 'student' || law === 'chi2') {
+                        config.params.push({
+                            id: 'ddl',
+                            label: 'Degrés de liberté (ddl)',
+                            type: 'number',
+                            min: 1,
+                            step: 1,
+                            value: 10
+                        });
+                    } else if (law === 'fisher') {
+                        config.params.push({
+                            id: 'ddl1',
+                            label: 'ddl1 (numérateur)',
+                            type: 'number',
+                            min: 1,
+                            step: 1,
+                            value: 5
+                        });
+                        config.params.push({
+                            id: 'ddl2',
+                            label: 'ddl2 (dénominateur)',
+                            type: 'number',
+                            min: 1,
+                            step: 1,
+                            value: 10
+                        });
+                    }
+
+                } else {
+                    config.help = 'Entrez la valeur statistique et les degrés de liberté. La table vous donne P(X > valeur).';
+                    
+                    var valueLabel = law === 'normal' ? 'Valeur z' :
+                                    law === 'student' ? 'Valeur t' :
+                                    law === 'chi2' ? 'Valeur χ²' : 'Valeur F';
+                    
+                    config.params.push({
+                        id: 'value',
+                        label: valueLabel,
+                        type: 'number',
+                        step: 0.001,
+                        value: 1.96
+                    });
+
+                    if (law === 'student' || law === 'chi2') {
+                        config.params.push({
+                            id: 'ddl',
+                            label: 'Degrés de liberté (ddl)',
+                            type: 'number',
+                            min: 1,
+                            step: 1,
+                            value: 10
+                        });
+                    } else if (law === 'fisher') {
+                        config.params.push({
+                            id: 'ddl1',
+                            label: 'ddl1 (numérateur)',
+                            type: 'number',
+                            min: 1,
+                            step: 1,
+                            value: 5
+                        });
+                        config.params.push({
+                            id: 'ddl2',
+                            label: 'ddl2 (dénominateur)',
+                            type: 'number',
+                            min: 1,
+                            step: 1,
+                            value: 10
+                        });
+                    }
+                }
+
+                return config;
+            };
+
+            function buildParams() {
+                var config = getConfig();
+                paramsContainer.innerHTML = '';
+                queryHelp.textContent = config.help;
+
+                config.params.forEach(function(param) {
+                    var div = document.createElement('div');
+                    div.className = 'form-group';
+
+                    var inputHtml;
+                    if (param.type === 'select') {
+                        inputHtml = '<select id="tables-param-' + param.id + '">';
+                        param.options.forEach(function(opt) {
+                            inputHtml += '<option value="' + opt.value + '">' + opt.label + '</option>';
+                        });
+                        inputHtml += '</select>';
+                    } else {
+                        inputHtml = '<input type="' + param.type + '" id="tables-param-' + param.id + '" ';
+                        if (param.min !== undefined) inputHtml += 'min="' + param.min + '" ';
+                        if (param.max !== undefined) inputHtml += 'max="' + param.max + '" ';
+                        if (param.step !== undefined) inputHtml += 'step="' + param.step + '" ';
+                        inputHtml += 'value="' + param.value + '">';
+                    }
+
+                    div.innerHTML = '<label for="tables-param-' + param.id + '">' + param.label + ':</label>' + inputHtml;
+                    paramsContainer.appendChild(div);
+                });
+            }
+
+            function calculate() {
+                console.log('=== Tables calculation ===');
+                var law = lawSelect.value;
+                var queryType = currentQueryType;
+                console.log('Law:', law, 'Query type:', queryType);
+
+                // Test direct jStat functions
+                console.log('Testing jStat functions:');
+                console.log('jStat.erf(0):', jStat.erf(0));
+                console.log('jStat.erf(1):', jStat.erf(1));
+                console.log('jStat.erfc(0):', jStat.erfc(0));
+                console.log('jStat.erfcinv(0.1):', jStat.erfcinv(0.1));
+                console.log('jStat.normal.inv(0.5):', jStat.normal.inv(0.5));
+                console.log('jStat.normal.cdf(0):', jStat.normal.cdf(0));
+                console.log('--- End tests ---\n');
+
+                var params = {};
+                if (law === 'student' || law === 'chi2') {
+                    params.ddl = parseFloat(document.getElementById('tables-param-ddl').value);
+                } else if (law === 'fisher') {
+                    params.ddl1 = parseFloat(document.getElementById('tables-param-ddl1').value);
+                    params.ddl2 = parseFloat(document.getElementById('tables-param-ddl2').value);
+                }
+
+                if (queryType === 'critical') {
+                    var alphaElem = document.getElementById('tables-param-alpha');
+                    console.log('Alpha element:', !!alphaElem);
+                    if (alphaElem) {
+                        console.log('Alpha value:', alphaElem.value);
+                    }
+                    var alpha = parseFloat(document.getElementById('tables-param-alpha').value);
+                    console.log('Alpha parsed:', alpha);
+                    var p = 1 - alpha;
+                    console.log('P (1-alpha):', p);
+
+                    if (law === 'normal') {
+                        console.log('Calculating normal inverse for p:', p);
+                        console.log('jStat.normal exists:', !!jStat.normal);
+                        console.log('jStat.normal.inv exists:', !!jStat.normal.inv);
+                        result = jStat.normal.inv(p);
+                        console.log('Result:', result);
+                    } else if (law === 'student') {
+                        result = jStat.studentt.inv(p, params.ddl);
+                    } else if (law === 'chi2') {
+                        result = jStat.chisquare.inv(p, params.ddl);
+                    } else if (law === 'fisher') {
+                        result = jStat.centralF.inv(p, params.ddl1, params.ddl2);
+                    }
+
+                    labelText = 'Valeur critique';
+                    valueText = result.toFixed(4);
+                    descText = 'Pour α = ' + alpha.toFixed(3);
+
+                } else {
+                    var value = parseFloat(document.getElementById('tables-param-value').value);
+                    var cdf;
+
+                    if (law === 'normal') {
+                        cdf = jStat.normal.cdf(value);
+                    } else if (law === 'student') {
+                        cdf = jStat.studentt.cdf(value, params.ddl);
+                    } else if (law === 'chi2') {
+                        cdf = jStat.chisquare.cdf(value, params.ddl);
+                    } else if (law === 'fisher') {
+                        cdf = jStat.centralF.cdf(value, params.ddl1, params.ddl2);
+                    }
+
+                    result = 1 - cdf;
+
+                    labelText = 'P-value';
+                    valueText = result.toFixed(6);
+                    descText = 'Valeur = ' + value.toFixed(3);
+                }
+
+                if (law === 'student' || law === 'chi2') {
+                    descText += ', ddl = ' + params.ddl;
+                } else if (law === 'fisher') {
+                    descText += ', ddl1 = ' + params.ddl1 + ', ddl2 = ' + params.ddl2;
+                }
+
+                console.log('Final result:', result);
+                resultLabel.textContent = labelText;
+                resultValue.textContent = valueText;
+                resultDescription.textContent = descText;
+                resultDisplay.classList.add('visible');
+            }
+
+            lawSelect.addEventListener('change', function() {
+                buildParams();
+                resultDisplay.classList.remove('visible');
+            });
+
+            document.querySelectorAll('input[name="tables-query-type"]').forEach(function(radio) {
+                radio.addEventListener('change', function() {
+                    currentQueryType = this.value;
+                    buildParams();
+                    resultDisplay.classList.remove('visible');
+                });
+            });
+
+            calculateBtn.addEventListener('click', calculate);
+
+            // Initialisation
+            buildParams();
+        })();
+    });
+    </script>
+</body>
+</html>
